@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админка OAuth клиентов</title>
+    <style>
+        body { font-family: system-ui; background: #0A111F; color: #EFF3F8; padding: 2rem; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input, button { padding: 10px; margin: 5px; border-radius: 8px; border: none; }
+        button { background: #24B23E; color: black; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Управление OIDC клиентами</h2>
+    <form id="createForm">
+        <input type="text" id="name" placeholder="Название приложения" required>
+        <input type="text" id="redirect_uris" placeholder="Redirect URIs (через запятую)" required>
+        <button type="submit">Создать клиент</button>
+    </form>
+    <pre id="result"></pre>
+</div>
+<script>
+    document.getElementById('createForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('name').value;
+        const redirect_uris = document.getElementById('redirect_uris').value;
+        const res = await fetch('/admin/clients', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, redirect_uris})
+        });
+        const data = await res.json();
+        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+    };
+</script>
+</body>
+</html>

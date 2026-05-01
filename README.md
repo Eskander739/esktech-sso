@@ -123,15 +123,50 @@ location = /validate {
 ```text
 esktech-sso/
 ├── app/
-│   ├── auth/          # OIDC / OAuth2 провайдер
-│   ├── adapters/      # LDAP, БД, JWT-верификация
-│   ├── clients/       # регистрация Client ID/Secret
-│   ├── sessions/      # управление сессиями
-│   ├── admin/         # админ-панель (Jinja2)
-│   └── storage/       # работа с БД
-├── migrations/        # Alembic
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── auth_server.py
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   └── crud.py
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   ├── password_validator.py
+│   │   ├── ldap_client.py
+│   │   └── user_source.py
+│   ├── endpoints/
+│   │   ├── __init__.py
+│   │   ├── oidc.py
+│   │   ├── admin.py
+│   │   └── health.py
+│   ├── templates/
+│   │   └── login.html
+│   └── utils/
+│       ├── __init__.py
+│       ├── license.py
+│       └── limits.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── unit/
+│   │   ├── __init__.py
+│   │   ├── test_password_validator.py
+│   │   └── test_limits.py
+│   ├── integration/
+│   │   ├── __init__.py
+│   │   └── test_db.py
+│   └── e2e/
+│       ├── __init__.py
+│       └── test_auth_flow.py
 ├── docker-compose.yml
-└── requirements.txt
+├── Dockerfile
+├── requirements.txt
+├── .env.example
+├── pyproject.toml
+└── Makefile
 ```
 #### Стек: FastAPI + PostgreSQL + Redis + Docker
 
