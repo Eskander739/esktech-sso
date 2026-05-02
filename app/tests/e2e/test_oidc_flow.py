@@ -1,16 +1,27 @@
 """E2E тесты для OIDC потока."""
+from typing import Any
+
 import pytest
 from auth.password_validator import hash_password
 from fastapi import status
 from httpx import AsyncClient
 
 
+def get_app(client: AsyncClient) -> Any:
+    """Получить экземпляр FastAPI приложения из тестового клиента."""
+    transport = client._transport
+    # Приведение к Any, чтобы mypy не ругался на отсутствие атрибута app
+    return transport.app  # type: ignore[attr-defined]
+
+
 @pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_oidc_authorization_code_flow(client: AsyncClient):
     """Полный OIDC Authorization Code Flow."""
+    app = get_app(client)
+
     # Создаём тестового пользователя в БД
-    user_db = client._transport.app.state.user_db
+    user_db = app.state.user_db
     hashed = hash_password("testpass123")
     await user_db.create(
         username="testuser",
@@ -109,8 +120,10 @@ async def test_oidc_client_credentials_flow(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_oidc_refresh_token_flow(client: AsyncClient):
     """Обновление токена через refresh_token."""
+    app = get_app(client)
+
     # Сначала создаём пользователя и клиента, получаем реальный refresh_token
-    user_db = client._transport.app.state.user_db
+    user_db = app.state.user_db
     hashed = hash_password("testpass123")
     await user_db.create(
         username="testuser2",
@@ -130,8 +143,8 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     client_id = client_data["client_id"]
     client_secret = client_data["client_secret"]
 
-    # Получаем код авторизации
-    await client.get(
+    # Первый запрос авторизации (перенаправляет на логин)
+    auth_resp = await client.get(
         "/oidc/authorize",
         params={
             "client_id": client_id,
@@ -141,6 +154,8 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
         },
         follow_redirects=False
     )
+    # Проверяем, что нас перенаправляют на страницу входа
+    assert auth_resp.status_code in [302, 307]
 
     # Логинимся
     login_resp = await client.post("/oidc/login", data={
