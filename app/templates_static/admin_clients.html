@@ -2,37 +2,587 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Админка OAuth клиентов</title>
+    <title>Админ панель EskTech SSO</title>
     <style>
-        body { font-family: system-ui; background: #0A111F; color: #EFF3F8; padding: 2rem; }
-        .container { max-width: 600px; margin: 0 auto; }
-        input, button { padding: 10px; margin: 5px; border-radius: 8px; border: none; }
-        button { background: #24B23E; color: black; cursor: pointer; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0A111F;
+            color: #EFF3F8;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFFFFF, #24B23E);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo span {
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            color: #24B23E;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            background: rgba(18,28,40,0.8);
+            border: 1px solid rgba(36,178,62,0.3);
+            color: #EFF3F8;
+            padding: 10px 24px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #24B23E;
+            color: #0A111F;
+            border-color: #24B23E;
+        }
+
+        .tab-btn:hover:not(.active) {
+            border-color: #24B23E;
+            background: rgba(36,178,62,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Карточки */
+        .card {
+            background: rgba(18,28,40,0.8);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(36,178,62,0.2);
+            margin-bottom: 24px;
+        }
+
+        .card h3 {
+            color: #24B23E;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        /* Таблицы */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        th {
+            color: #24B23E;
+            font-weight: 600;
+        }
+
+        /* Формы */
+        input, select, textarea {
+            background: #0A111F;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #EFF3F8;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #24B23E;
+        }
+
+        button {
+            background: #24B23E;
+            color: #0A111F;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #1EA036;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: #0A111F;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #EFF3F8;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .badge {
+            background: rgba(36,178,62,0.15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #24B23E;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 24px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(36,178,62,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        pre {
+            background: #0A111F;
+            padding: 12px;
+            border-radius: 12px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 16px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .alert-success {
+            background: rgba(36,178,62,0.2);
+            border: 1px solid #24B23E;
+            color: #24B23E;
+        }
+
+        .alert-error {
+            background: rgba(255,107,107,0.2);
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 8px;
+            }
+        }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>Управление OIDC клиентами</h2>
-    <form id="createForm">
-        <input type="text" id="name" placeholder="Название приложения" required>
-        <input type="text" id="redirect_uris" placeholder="Redirect URIs (через запятую)" required>
-        <button type="submit">Создать клиент</button>
-    </form>
-    <pre id="result"></pre>
+    <div class="header">
+        <div class="logo">EskTech.<span>Админ панель</span></div>
+        <span class="badge" id="licenseBadge">Community Edition</span>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="clients">📱 OIDC Клиенты</button>
+        <button class="tab-btn" data-tab="users">👥 Пользователи</button>
+    </div>
+
+    <!-- Вкладка: OIDC Клиенты -->
+    <div id="tab-clients" class="tab-content active">
+        <div class="card">
+            <h3>➕ Создать новый OIDC клиент</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Название приложения</label>
+                    <input type="text" id="clientName" placeholder="Например: GitLab Production">
+                </div>
+                <div class="form-group">
+                    <label>Redirect URI (один или несколько через запятую)</label>
+                    <input type="text" id="clientRedirectUris" placeholder="https://gitlab.example.com/users/auth/openid_connect/callback">
+                </div>
+            </div>
+            <button id="createClientBtn">Создать клиент</button>
+            <div id="clientResult"></div>
+        </div>
+
+        <div class="card">
+            <h3>📋 Список OIDC клиентов</h3>
+            <table id="clientsTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Название</th>
+                        <th>Client ID</th>
+                        <th>Redirect URIs</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsList">
+                    <tr><td colspan="5">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Вкладка: Пользователи -->
+    <div id="tab-users" class="tab-content">
+        <div class="card">
+            <h3>➕ Создать пользователя</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="userUsername" placeholder="username">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="userEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Полное имя</label>
+                    <input type="text" id="userFullName" placeholder="Иван Иванов">
+                </div>
+                <div class="form-group">
+                    <label>Пароль</label>
+                    <input type="password" id="userPassword" placeholder="******">
+                </div>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="userIsActive" checked> Активен</label>
+            </div>
+            <button id="createUserBtn">Создать пользователя</button>
+            <div id="userResult"></div>
+        </div>
+
+        <div class="card">
+            <h3>📋 Список пользователей</h3>
+            <table id="usersTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Полное имя</th>
+                        <th>Активен</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="usersList">
+                    <tr><td colspan="6">Загрузка...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+<!-- Модальное окно для редактирования пользователя -->
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редактировать пользователя</h3>
+            <span class="close">&times;</span>
+        </div>
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="editUserEmail">
+        </div>
+        <div class="form-group">
+            <label>Полное имя</label>
+            <input type="text" id="editUserFullName">
+        </div>
+        <div class="form-group">
+            <label>Новый пароль (оставьте пустым, чтобы не менять)</label>
+            <input type="password" id="editUserPassword">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="editUserIsActive"> Активен</label>
+        </div>
+        <button id="updateUserBtn">Сохранить</button>
+    </div>
+</div>
+
 <script>
-    document.getElementById('createForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const name = document.getElementById('name').value;
-        const redirect_uris = document.getElementById('redirect_uris').value;
-        const res = await fetch('/admin/clients', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name, redirect_uris})
+    // --- Переключение табов ---
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+            if (btn.dataset.tab === 'clients') loadClients();
+            if (btn.dataset.tab === 'users') loadUsers();
         });
+    });
+
+    // --- Функции API ---
+    async function apiCall(url, method, body = null) {
+        const options = { method, headers: {'Content-Type': 'application/json'} };
+        if (body) options.body = JSON.stringify(body);
+        const res = await fetch(url, options);
         const data = await res.json();
-        document.getElementById('result').innerText = JSON.stringify(data, null, 2);
+        if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+        return data;
+    }
+
+    // --- Клиенты ---
+    async function loadClients() {
+        try {
+            const clients = await apiCall('/admin/clients/list', 'GET');
+            const tbody = document.getElementById('clientsList');
+            if (clients.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">Нет созданных клиентов</td></tr>';
+                return;
+            }
+            tbody.innerHTML = clients.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.application_name || '-'}</td>
+                    <td><code>${c.client_id}</code></td>
+                    <td><small>${c.redirect_uris || '-'}</small></td>
+                    <td class="actions">
+                        <button class="btn-secondary" onclick="showClientSecret(${c.id}, '${c.client_secret}')">Показать секрет</button>
+                        <button class="btn-danger" onclick="deleteClient(${c.id})">Удалить</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            document.getElementById('clientsList').innerHTML = `<tr><td colspan="5">Ошибка: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function showClientSecret(clientId, clientSecret) {
+        alert(`Client ID: ${clientId}\nClient Secret: ${clientSecret}\nСохраните секрет! Он больше не будет показан.`);
+    }
+
+    async function deleteClient(id) {
+        if (!confirm('Удалить клиента? Все связанные токены будут потеряны.')) return;
+        try {
+            await apiCall(`/admin/clients/${id}`, 'DELETE');
+            loadClients();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    }
+
+    document.getElementById('createClientBtn').onclick = async () => {
+        const name = document.getElementById('clientName').value.trim();
+        const redirect_uris = document.getElementById('clientRedirectUris').value.trim();
+        if (!name || !redirect_uris) {
+            alert('Заполните все поля');
+            return;
+        }
+        try {
+            const result = await apiCall('/admin/clients', 'POST', { name, redirect_uris });
+            document.getElementById('clientResult').innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Клиент создан!</strong><br>
+                    Client ID: <code>${result.client_id}</code><br>
+                    Client Secret: <code>${result.client_secret}</code><br>
+                    Сохраните эти данные! Секрет больше не будет показан.
+                </div>
+            `;
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientRedirectUris').value = '';
+            loadClients();
+        } catch (e) {
+            document.getElementById('clientResult').innerHTML = `<div class="alert alert-error">Ошибка: ${e.message}</div>`;
+        }
     };
+
+    // --- Пользователи ---
+    async function loadUsers() {
+        try {
+            const users = await apiCall('/admin/users/list', 'GET');
+            const tbody = document.getElementById('usersList');
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6">Нет пользователей</td></tr>';
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username}</td>
+                    <td>${u.email}</td>
+                    <td>${u.full_name || '-'}</td>
+                    <td>${u.is_active ? '✅' : '❌'}</td>
+                    <td class="actions">
+                        <button onclick="openEditUser(${u.id}, '${u.email}', '${u.full_name || ''}', ${u.is_active})">✏️ Редактировать</button>
+                        <button class="btn-danger" onclick="deleteUser(${u.id})">🗑️ Удалить</button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            document.getElementById('usersList').innerHTML = `<tr><td colspan="6">Ошибка: ${e.message}</td></tr>`;
+        }
+    }
+
+    document.getElementById('createUserBtn').onclick = async () => {
+        const username = document.getElementById('userUsername').value.trim();
+        const email = document.getElementById('userEmail').value.trim();
+        const full_name = document.getElementById('userFullName').value.trim();
+        const password = document.getElementById('userPassword').value;
+        const is_active = document.getElementById('userIsActive').checked;
+
+        if (!username || !email || !password) {
+            alert('Заполните обязательные поля: Username, Email, Пароль');
+            return;
+        }
+        try {
+            await apiCall('/admin/users', 'POST', { username, email, full_name, password, is_active });
+            document.getElementById('userResult').innerHTML = '<div class="alert alert-success">Пользователь создан!</div>';
+            document.getElementById('userUsername').value = '';
+            document.getElementById('userEmail').value = '';
+            document.getElementById('userFullName').value = '';
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userIsActive').checked = true;
+            loadUsers();
+        } catch (e) {
+            document.getElementById('userResult').innerHTML = `<div class="alert alert-error">Ошибка: ${e.message}</div>`;
+        }
+    };
+
+    // Редактирование пользователя
+    const modal = document.getElementById('editUserModal');
+    const modalClose = document.querySelector('.close');
+
+    window.openEditUser = (id, email, fullName, isActive) => {
+        document.getElementById('editUserId').value = id;
+        document.getElementById('editUserEmail').value = email;
+        document.getElementById('editUserFullName').value = fullName;
+        document.getElementById('editUserIsActive').checked = isActive;
+        document.getElementById('editUserPassword').value = '';
+        modal.style.display = 'flex';
+    };
+
+    modalClose.onclick = () => modal.style.display = 'none';
+    window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+    document.getElementById('updateUserBtn').onclick = async () => {
+        const id = document.getElementById('editUserId').value;
+        const email = document.getElementById('editUserEmail').value.trim();
+        const full_name = document.getElementById('editUserFullName').value.trim();
+        const password = document.getElementById('editUserPassword').value;
+        const is_active = document.getElementById('editUserIsActive').checked;
+
+        try {
+            await apiCall(`/admin/users/${id}`, 'PUT', { email, full_name, password: password || undefined, is_active });
+            modal.style.display = 'none';
+            loadUsers();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    window.deleteUser = async (id) => {
+        if (!confirm('Удалить пользователя?')) return;
+        try {
+            await apiCall(`/admin/users/${id}`, 'DELETE');
+            loadUsers();
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
+
+    // Проверка лицензии
+    async function checkLicense() {
+        try {
+            const info = await apiCall('/admin/license', 'GET');
+            document.getElementById('licenseBadge').innerText = info.enterprise ? 'Enterprise Edition' : 'Community Edition';
+        } catch(e) {}
+    }
+
+    // Инициализация
+    loadClients();
+    loadUsers();
+    checkLicense();
 </script>
 </body>
 </html>

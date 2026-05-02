@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Управление пользователями</title>
+    <style>
+        body { font-family: system-ui; background: #0A111F; color: #EFF3F8; padding: 2rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: rgba(18,28,40,0.8); border-radius: 16px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #2a3a4a; }
+        th { color: #24B23E; }
+        a, button { background: #24B23E; color: #0A111F; padding: 6px 12px; border-radius: 20px; text-decoration: none; border: none; cursor: pointer; margin-right: 8px; font-size: 0.9rem; }
+        .danger { background: #ff6b6b; color: #0A111F; }
+        .add-btn { display: inline-block; margin-bottom: 1rem; }
+        .actions { display: flex; gap: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Пользователи</h2>
+    <a href="/admin/users/create" class="add-btn">➕ Создать пользователя</a>
+    <a href="/admin/clients" class="add-btn" style="background: #1E88E5;">🔑 Управление клиентами</a>
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Username</th><th>Email</th><th>Полное имя</th><th>Активен</th><th>Действия</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+        <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.full_name or '' }}</td>
+            <td>{% if u.is_active %}✅{% else %}❌{% endif %}</td>
+            <td class="actions">
+                <a href="/admin/users/{{ u.id }}/edit">✏️ Редактировать</a>
+                <button class="danger" onclick="deleteUser({{ u.id }})">🗑️ Удалить</button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<script>
+    async function deleteUser(id) {
+        if (!confirm('Удалить пользователя?')) return;
+        const res = await fetch(`/admin/users/${id}`, { method: 'DELETE' });
+        if (res.ok) location.reload();
+        else alert('Ошибка удаления');
+    }
+</script>
+</body>
+</html>

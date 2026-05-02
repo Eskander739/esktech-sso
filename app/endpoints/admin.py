@@ -6,7 +6,6 @@ from db.crud import create_oauth_client
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-
 from templates_static import templates
 from utils.license import is_enterprise
 from utils.limits import check_clients_limit

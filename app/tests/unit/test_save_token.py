@@ -10,7 +10,7 @@ async def test_save_token():
     """Проверка сохранения токена."""
     server = await create_authorization_server()
 
-    server.save_token = AsyncMock()
+    server.save_token = MagicMock()
 
     token_data = {
         "access_token": "test_access_123",
@@ -36,7 +36,7 @@ async def test_save_token():
 async def test_save_token_without_user():
     """Проверка сохранения токена без пользователя (client credentials)."""
     server = await create_authorization_server()
-    server.save_token = AsyncMock()
+    server.save_token = MagicMock()
 
     token_data = {
         "access_token": "client_token_123",

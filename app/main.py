@@ -5,7 +5,7 @@ from typing import Any
 from auth_server import create_authorization_server
 from config import settings
 from db.database import close_db, init_db
-from endpoints import admin, health, oidc
+from endpoints import admin, health, oidc, users
 from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -31,6 +31,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 # Подключение роутеров
 app.include_router(health.router)
+app.include_router(users.router)
 app.include_router(oidc.router)
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 
