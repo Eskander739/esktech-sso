@@ -1,6 +1,7 @@
 """E2E тесты для JWT верификации."""
 import jwt
 import pytest
+from fastapi import status
 from httpx import AsyncClient
 
 
@@ -11,7 +12,7 @@ async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token)
         "/oidc/userinfo",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
 
 
 @pytest.mark.asyncio
@@ -19,7 +20,7 @@ async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token)
 async def test_jwt_missing_token(client: AsyncClient):
     """Запрос без токена."""
     resp = await client.get("/oidc/userinfo")
-    assert resp.status_code == 401
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
     assert "Bearer" in resp.headers.get("WWW-Authenticate", "")
 
 
@@ -30,7 +31,7 @@ async def test_jwt_invalid_token(client: AsyncClient):
         "/oidc/userinfo",
         headers={"Authorization": "Bearer invalid.token.here"}
     )
-    assert resp.status_code == 401
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio
@@ -41,7 +42,7 @@ async def test_jwt_expired_token(client: AsyncClient, expired_token):
         "/oidc/userinfo",
         headers={"Authorization": f"Bearer {expired_token}"}
     )
-    assert resp.status_code == 401
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
     assert "expired" in resp.text.lower()
 
 
@@ -57,7 +58,7 @@ async def test_jwt_wrong_audience(client: AsyncClient):
         "/oidc/userinfo",
         headers={"Authorization": f"Bearer {wrong_aud_token}"}
     )
-    assert resp.status_code == 401
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio
@@ -68,7 +69,7 @@ async def test_jwt_missing_sub_claim(client: AsyncClient):
         "/oidc/userinfo",
         headers={"Authorization": f"Bearer {token}"}
     )
-    assert resp.status_code == 401
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio
@@ -76,7 +77,7 @@ async def test_jwt_missing_sub_claim(client: AsyncClient):
 async def test_jwk_endpoint_returns_keys(client: AsyncClient):
     """Эндпоинт JWKS отдаёт публичные ключи."""
     resp = await client.get("/oidc/jwks")
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
     assert "keys" in data
     assert len(data["keys"]) > 0

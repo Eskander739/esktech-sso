@@ -1,5 +1,6 @@
 """E2E тесты для LDAP аутентификации."""
 import pytest
+from fastapi import status
 from httpx import AsyncClient
 
 
@@ -11,7 +12,7 @@ async def test_ldap_login_success(client: AsyncClient, ldap_test_server):
         "username": "ldap_user",
         "password": "correct_password"
     }, follow_redirects=False)
-    assert response.status_code == 302
+    assert response.status_code == status.HTTP_302_FOUND
     assert "session" in response.cookies
 
 
@@ -22,7 +23,7 @@ async def test_ldap_login_invalid_credentials(client: AsyncClient):
         "username": "ldap_user",
         "password": "wrong_password"
     })
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert "Неверный логин или пароль" in response.text
 
 

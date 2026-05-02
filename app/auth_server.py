@@ -3,7 +3,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 import jwt
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from starlette.datastructures import UploadFile
 from starlette.responses import RedirectResponse
 
@@ -36,16 +36,16 @@ class OIDCServer:
         # Проверяем клиента
         client = await oauth_client_db.get_client(client_id)
         if not client or not client.get("is_active"):
-            raise HTTPException(400, "Invalid client")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid client")
 
         # Проверяем redirect_uri
         allowed_uris = client.get("redirect_uris", "").split()
         if redirect_uri not in allowed_uris:
-            raise HTTPException(400, "Invalid redirect_uri")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid redirect_uri")
 
         # Проверяем response_type
         if response_type != "code":
-            raise HTTPException(400, "Only authorization_code flow is supported")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only authorization_code flow is supported")
 
         user = request.session.get("user")
         if not user:
@@ -87,7 +87,7 @@ class OIDCServer:
 
         # Проверяем, что обязательные параметры являются строками
         if not isinstance(grant_type, str) or not isinstance(client_id, str) or not isinstance(client_secret, str):
-            raise HTTPException(400, "Invalid or missing form parameters")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing form parameters")
 
         # Получаем зависимости из state
         oauth_client_db = request.app.state.oauth_client_db
@@ -98,32 +98,32 @@ class OIDCServer:
         # Проверяем клиента
         client = await oauth_client_db.get_client(client_id)
         if not client or not client.get("is_active"):
-            raise HTTPException(401, "Invalid client")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid client")
 
         if client.get("client_secret") != client_secret:
-            raise HTTPException(401, "Invalid client secret")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid client secret")
 
         if grant_type == "authorization_code":
             code = form.get("code")
             redirect_uri = form.get("redirect_uri")
 
             if not isinstance(code, str) or not isinstance(redirect_uri, str):
-                raise HTTPException(400, "Invalid or missing code/redirect_uri")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing code/redirect_uri")
 
             # Проверяем код
             code_data = await oauth_code_db.get_code(code)
             if not code_data:
-                raise HTTPException(400, "Invalid code")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid code")
 
             if code_data["client_id"] != client_id:
-                raise HTTPException(400, "Code client mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code client mismatch")
 
             if code_data["redirect_uri"] != redirect_uri:
-                raise HTTPException(400, "Redirect URI mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Redirect URI mismatch")
 
             user = await user_db.get_by_id(code_data["user_id"])
             if not user:
-                raise HTTPException(400, "User not found")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "User not found")
 
             # Удаляем использованный код
             await oauth_code_db.delete_code(code)
@@ -157,18 +157,18 @@ class OIDCServer:
             refresh_token = form.get("refresh_token")
 
             if not isinstance(refresh_token, str):
-                raise HTTPException(400, "Invalid or missing refresh_token")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing refresh_token")
 
             token_data = await oauth_token_db.get_token_by_refresh(refresh_token)
             if not token_data or token_data.get("is_revoked"):
-                raise HTTPException(400, "Invalid refresh token")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid refresh token")
 
             if token_data["client_id"] != client_id:
-                raise HTTPException(400, "Client mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Client mismatch")
 
             user = await user_db.get_by_id(token_data["user_id"])
             if not user:
-                raise HTTPException(400, "User not found")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "User not found")
 
             # Удаляем старый токен
             await oauth_token_db.revoke_token(refresh_token)
@@ -210,29 +210,29 @@ class OIDCServer:
             }
 
         else:
-            raise HTTPException(400, "Unsupported grant_type")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unsupported grant_type")
 
     async def userinfo(self, request: Request):
         """Userinfo эндпоинт."""
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(401, "Missing or invalid token")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing or invalid token")
 
         token = auth_header.replace("Bearer ", "")
 
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
         except jwt.InvalidTokenError:
-            raise HTTPException(401, "Invalid token")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
 
         user_id = payload.get("sub")
         if not user_id:
-            raise HTTPException(401, "Invalid token payload")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token payload")
 
         user_db = request.app.state.user_db
         user = await user_db.get_by_id(int(user_id))
         if not user:
-            raise HTTPException(401, "User not found")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
 
         return {
             "sub": str(user["id"]),

@@ -1,5 +1,6 @@
 """Интеграционные тесты API пользователей."""
 import pytest
+from fastapi import status
 from httpx import AsyncClient
 
 
@@ -7,7 +8,7 @@ from httpx import AsyncClient
 async def test_list_users_api(client: AsyncClient, setup_test_db):
     """Тест API списка пользователей."""
     response = await client.get("/admin/users/list")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert isinstance(response.json(), list)
 
 
@@ -22,7 +23,7 @@ async def test_create_user_api(client: AsyncClient, setup_test_db):
         "is_active": True
     }
     response = await client.post("/admin/users/", json=user_data)
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == "apiuser"
     assert data["email"] == "api@test.com"
@@ -43,7 +44,7 @@ async def test_create_user_duplicate_error(client: AsyncClient, setup_test_db):
 
     # Пытаемся создать с тем же username
     response = await client.post("/admin/users/", json=user_data)
-    assert response.status_code == 400
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert "Username already exists" in response.text
 
 
@@ -61,7 +62,7 @@ async def test_get_user_api(client: AsyncClient, setup_test_db):
 
     # Получаем
     response = await client.get(f"/admin/users/{user_id}")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == "getuser"
     assert data["email"] == "get@test.com"
@@ -83,7 +84,7 @@ async def test_update_user_api(client: AsyncClient, setup_test_db):
         "full_name": "New Name",
         "is_active": False
     })
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     # Проверяем изменения
     get_resp = await client.get(f"/admin/users/{user_id}")
@@ -103,8 +104,8 @@ async def test_delete_user_api(client: AsyncClient, setup_test_db):
     user_id = create_resp.json()["id"]
 
     response = await client.delete(f"/admin/users/{user_id}")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
 
     # Проверяем что пользователь удалён
     get_resp = await client.get(f"/admin/users/{user_id}")
-    assert get_resp.status_code == 404
+    assert get_resp.status_code == status.HTTP_404_NOT_FOUND

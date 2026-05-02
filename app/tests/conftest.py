@@ -1,5 +1,4 @@
 """Фикстуры для тестов."""
-import asyncio
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -16,8 +15,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 # Используем PostgreSQL для тестов (отдельная БД)
-TEST_DATABASE_URL = "postgresql+asyncpg://sso_user:sso_pass@localhost:5432/sso"
-settings.DATABASE_URL = TEST_DATABASE_URL
+settings.DATABASE_URL = "postgresql+asyncpg://sso_user:sso_pass@localhost:5432/sso"
 
 
 @pytest.fixture(autouse=True, scope="function")
@@ -157,4 +155,3 @@ def ldap_test_server():
 
     server = MockLDAPServer()
     yield server
-    # Закрываем сервер если нужно

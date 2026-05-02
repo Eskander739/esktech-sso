@@ -1,5 +1,6 @@
 """E2E тесты для auth flow."""
 import pytest
+from fastapi import status
 from httpx import AsyncClient
 
 
@@ -16,5 +17,5 @@ async def test_authorize_redirect(client: AsyncClient, test_client_app):
         },
         follow_redirects=False
     )
-    assert response.status_code == 307 or response.status_code == 302
+    assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT or response.status_code == status.HTTP_302_FOUND
     assert "/oidc/login" in response.headers["location"]
