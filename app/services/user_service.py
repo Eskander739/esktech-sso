@@ -1,5 +1,6 @@
 # app/services/user_service.py
 """Сервис для работы с пользователями в БД."""
+from collections.abc import Sequence
 
 from auth.password_validator import hash_password
 from db.models import User
@@ -13,7 +14,7 @@ class UserService:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_all(self) -> list[User]:
+    async def get_all(self) -> Sequence[User]:
         """Получить всех пользователей."""
         result = await self.session.execute(select(User))
         return result.scalars().all()
