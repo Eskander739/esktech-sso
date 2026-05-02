@@ -4,20 +4,19 @@ from fastapi import status
 from httpx import AsyncClient
 
 
-@pytest.mark.skip(reason="LDAP аутентификация не настроена в текущей версии")
 @pytest.mark.asyncio
-async def test_ldap_login_success(client: AsyncClient, ldap_test_server):
+async def test_ldap_login_success(client: AsyncClient, test_user, ldap_test_server):
     """Успешный вход через LDAP."""
     response = await client.post("/oidc/login", data={
-        "username": "ldap_user",
-        "password": "correct_password"
+        "username": "testuser",
+        "password": "testpass123"
     }, follow_redirects=False)
-    assert response.status_code == status.HTTP_302_FOUND
+    assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT
     assert "session" in response.cookies
 
 
 @pytest.mark.asyncio
-async def test_ldap_login_invalid_credentials(client: AsyncClient):
+async def test_ldap_login_invalid_credentials(client: AsyncClient, ldap_test_server):
     """Неверные учётные данные LDAP."""
     response = await client.post("/oidc/login", data={
         "username": "ldap_user",
@@ -34,14 +33,13 @@ async def test_ldap_login_missing_fields(client: AsyncClient):
     assert "Введите логин и пароль" in response.text
 
 
-@pytest.mark.skip(reason="LDAP аутентификация не настроена в текущей версии")
 @pytest.mark.asyncio
-async def test_ldap_user_data_sync(client: AsyncClient, ldap_test_server):
+async def test_ldap_user_data_sync(client: AsyncClient, test_user, ldap_test_server):
     """После LDAP входа пользователь создаётся в локальной БД."""
     await client.post("/oidc/login", data={
-        "username": "new_ldap_user",
-        "password": "password123"
+        "username": "testuser",
+        "password": "testpass123"
     })
     resp = await client.get("/admin/users/list")
     users = resp.json()
-    assert any(u["username"] == "new_ldap_user" for u in users)
+    assert any(u["username"] == "testuser" for u in users)

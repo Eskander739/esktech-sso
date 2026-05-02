@@ -1,4 +1,5 @@
 """Фикстуры для тестов."""
+import time
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -9,15 +10,203 @@ from config import settings
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
 from httpx import ASGITransport, AsyncClient
+from ldap3 import ALL, Connection, Server
 from main import app
 from services.db_pool import DBPool
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from utils.cli import CLIControl
 
-# Используем PostgreSQL для тестов (отдельная БД)
 settings.DATABASE_URL = "postgresql+asyncpg://sso_user:sso_pass@localhost:5432/sso"
 
+# Конфигурация тестового LDAP
+LDAP_CONTAINER_NAME = "test-ldap-server"
+LDAP_PORT = 389
+LDAP_BASE_DN = "dc=example,dc=org"
+LDAP_ADMIN_DN = "cn=admin,dc=example,dc=org"
+LDAP_ADMIN_PASSWORD = "admin_password"
+LDAP_DOMAIN = "example.org"
 
+
+class TestLDAPServer:
+    """Управление тестовым LDAP-сервером через Podman CLI."""
+
+    def __init__(self):
+        self.cli = CLIControl()
+
+    def start(self):
+        """Запускает контейнер с OpenLDAP и загружает тестовые данные."""
+        # Удаляем старый контейнер, если остался
+        self.cli.execute(
+            f"podman rm -f {LDAP_CONTAINER_NAME}",
+            is_text=True,
+            shell=True
+        )
+
+        result = self.cli.execute(
+            f"podman run -d "
+            f"--name {LDAP_CONTAINER_NAME} "
+            f"-e LDAP_ORGANISATION=Test "
+            f"-e LDAP_DOMAIN={LDAP_DOMAIN} "
+            f"-e LDAP_ADMIN_PASSWORD={LDAP_ADMIN_PASSWORD} "
+            f"-p {LDAP_PORT}:{LDAP_PORT} "
+            f"osixia/openldap:latest",
+            is_text=True,
+            shell=True
+        )
+
+        print(f"Container started: {result}")
+
+        # Ждём запуска LDAP-сервера
+        self._wait_until_ready()
+
+        # Загружаем тестовых пользователей
+        self._load_test_data()
+
+    def stop(self):
+        """Останавливает и удаляет контейнер."""
+        self.cli.execute(
+            f"podman rm -f {LDAP_CONTAINER_NAME}",
+            user="root",
+            password="root",
+            is_text=True,
+            shell=True
+        )
+
+    def _wait_until_ready(self, timeout=30):
+        """Ожидает готовности LDAP-сервера."""
+        start_time = time.time()
+        server = Server("localhost", port=LDAP_PORT, get_info=ALL)
+
+        while time.time() - start_time < timeout:
+            try:
+                conn = Connection(
+                    server,
+                    user=LDAP_ADMIN_DN,
+                    password=LDAP_ADMIN_PASSWORD,
+                    auto_bind=True,
+                )
+                conn.unbind()
+                print("LDAP server is ready!")
+                return True
+            except Exception as e:
+                print(f"Waiting for LDAP server... {e}")
+                time.sleep(1)
+
+        raise TimeoutError(f"LDAP server did not start within {timeout} seconds")
+
+    def _load_test_data(self):
+        """Загружает тестовых пользователей в LDAP."""
+        server = Server("localhost", port=LDAP_PORT, get_info=ALL)
+        conn = Connection(
+            server,
+            user=LDAP_ADMIN_DN,
+            password=LDAP_ADMIN_PASSWORD,
+            auto_bind=True,
+        )
+
+        # Создаём организационную единицу для пользователей
+        try:
+            conn.add(
+                f"ou=users,{LDAP_BASE_DN}",
+                ["organizationalUnit", "top"],
+                {"ou": "users"},
+            )
+        except Exception:
+            pass  # OU может уже существовать
+
+        # Тестовый пользователь 1
+        conn.add(
+            f"uid=ldap_user,ou=users,{LDAP_BASE_DN}",
+            ["inetOrgPerson", "top"],
+            {
+                "uid": "ldap_user",
+                "cn": "LDAP Test User",
+                "sn": "User",
+                "givenName": "LDAP",
+                "mail": "ldap_user@example.org",
+                "userPassword": "correct_password",
+            },
+        )
+
+        # Тестовый пользователь 2
+        conn.add(
+            f"uid=new_ldap_user,ou=users,{LDAP_BASE_DN}",
+            ["inetOrgPerson", "top"],
+            {
+                "uid": "new_ldap_user",
+                "cn": "New LDAP User",
+                "sn": "User",
+                "givenName": "New",
+                "mail": "new_ldap_user@example.org",
+                "userPassword": "password123",
+            },
+        )
+
+        conn.unbind()
+        print("Test users loaded successfully")
+
+    def authenticate(self, username: str, password: str) -> bool:
+        """Проверяет учётные данные LDAP-пользователя."""
+        server = Server("localhost", port=LDAP_PORT, get_info=ALL)
+        user_dn = f"uid={username},ou=users,{LDAP_BASE_DN}"
+
+        try:
+            conn = Connection(
+                server,
+                user=user_dn,
+                password=password,
+                auto_bind=True,
+            )
+            conn.unbind()
+            return True
+        except Exception:
+            return False
+
+    def get_user_info(self, username: str) -> dict | None:
+        """Получает информацию о пользователе из LDAP."""
+        server = Server("localhost", port=LDAP_PORT, get_info=ALL)
+        conn = Connection(
+            server,
+            user=LDAP_ADMIN_DN,
+            password=LDAP_ADMIN_PASSWORD,
+            auto_bind=True,
+        )
+
+        conn.search(
+            search_base=f"ou=users,{LDAP_BASE_DN}",
+            search_filter=f"(uid={username})",
+            attributes=["uid", "cn", "sn", "givenName", "mail"],
+        )
+
+        if conn.entries:
+            entry = conn.entries[0]
+            conn.unbind()
+            return {
+                "username": str(entry.uid),
+                "full_name": str(entry.cn),
+                "email": str(entry.mail),
+                "first_name": str(entry.givenName),
+                "last_name": str(entry.sn),
+            }
+
+        conn.unbind()
+        return None
+
+
+@pytest.fixture(scope="session")
+def ldap_test_server():
+    """Запускает тестовый LDAP-сервер через Podman CLI."""
+    server = TestLDAPServer()
+
+    try:
+        server.start()
+        yield server
+    finally:
+        server.stop()
+
+
+# Остальные фикстуры остаются без изменений...
 @pytest.fixture(autouse=True, scope="function")
 async def setup_test_db():
     """Настройка тестовой БД для каждого теста с очисткой данных."""
@@ -133,25 +322,3 @@ async def expired_token(test_user, test_client_app):
     }
     token = jwt.encode(payload, server.secret_key, algorithm=server.algorithm)
     return token
-
-
-@pytest.fixture(scope="session")
-def ldap_test_server():
-    """Запускает тестовый LDAP сервер."""
-
-    # Здесь нужно настроить тестовый LDAP сервер
-    # Например, используя ldap3 или запуская docker контейнер
-
-    # Вариант 1: Использовать мок
-    class MockLDAPServer:
-        def __init__(self):
-            self.users = {
-                "ldap_user": "correct_password",
-                "new_ldap_user": "password123"
-            }
-
-        def authenticate(self, username, password):
-            return self.users.get(username) == password
-
-    server = MockLDAPServer()
-    yield server

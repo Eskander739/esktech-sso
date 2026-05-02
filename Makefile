@@ -21,6 +21,12 @@ test-integration:
 test-e2e:
 	cd app && PYTHONPATH=. pytest tests/e2e/ -v
 
+test-ldap:
+	cd app && PYTHONPATH=. pytest tests/e2e/test_ldap_flow.py -v
+
+test-oidc:
+	cd app && PYTHONPATH=. pytest tests/e2e/test_oidc_flow.py -v
+
 lint:
 	@echo "🔎 Running Ruff linter..."
 	@poetry run ruff check $(SRC_DIR) --no-cache --preview || true

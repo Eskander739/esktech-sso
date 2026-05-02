@@ -34,7 +34,7 @@ async def login(request: Request):
     password = form.get("password")
 
     if not username or not password:
-        return templates.TemplateResponse(request,
+        return templates.TemplateResponse(
             "login.html",
             {"request": request, "error": "Введите логин и пароль"},
         )
