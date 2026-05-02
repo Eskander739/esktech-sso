@@ -1,4 +1,3 @@
-# app/services/user_service.py
 """Сервис для работы с пользователями в БД."""
 from collections.abc import Sequence
 

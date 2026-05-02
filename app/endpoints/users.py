@@ -1,4 +1,3 @@
-# app/endpoints/users.py
 """Управление пользователями (CRUD) для администратора."""
 
 from auth.password_validator import hash_password

@@ -1,4 +1,3 @@
-# app/tests/integration/test_user_api.py
 """Интеграционные тесты API пользователей."""
 import pytest
 from httpx import AsyncClient

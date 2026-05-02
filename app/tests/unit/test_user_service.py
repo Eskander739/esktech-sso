@@ -1,4 +1,3 @@
-# app/tests/unit/test_user_service.py
 """Unit тесты для сервиса пользователей."""
 from unittest.mock import AsyncMock, MagicMock, patch
 

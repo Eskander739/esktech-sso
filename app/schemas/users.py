@@ -1,4 +1,3 @@
-# app/schemas/user.py
 """Pydantic модели для пользователей."""
 
 from pydantic import BaseModel

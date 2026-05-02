@@ -1,4 +1,3 @@
-# app/tests/conftest.py (обновлённый)
 """Фикстуры для тестов."""
 import pytest
 from db.database import Base, get_session

@@ -1,4 +1,3 @@
-# app/tests/integration/test_user_integration.py
 """Интеграционные тесты для пользователей."""
 import pytest
 from services.user_service import UserService
