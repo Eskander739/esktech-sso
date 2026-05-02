@@ -1,0 +1,13 @@
+REDIS_POOL_SIZE = 10
+DB_POOL_SIZE = 10
+WS_POOL_SIZE = 10
+
+
+class ApiVersion:
+    V0 = "/api/v0"
+    V1 = "/api/v1"
+    V2 = "/api/v2"
+
+
+PROD_ENV = "opt/fast-api-users.env"
+CODE_EXPIRE_MINUTES = 5

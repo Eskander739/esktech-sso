@@ -1,113 +1,291 @@
 """Настройка OIDC-сервера на основе Authlib."""
-from collections.abc import Coroutine
-from typing import Any
+import secrets
+from datetime import UTC, datetime, timedelta
 
-from authlib.oauth2 import AuthorizationServer as StarletteAuthorizationServer
-from authlib.oauth2.rfc6749 import grants
-from authlib.oauth2.rfc6749.requests import OAuth2Request
-from authlib.oauth2.rfc7636 import CodeChallenge
-from db.crud import (
-    delete_authorization_code,
-    get_authorization_code,
-    get_oauth_client,
-    get_token,
-    get_user_by_id,
-    revoke_token,
-    save_authorization_code,
-)
-from db.models import OAuthClient as OAuthClientModel
+import jwt
+from fastapi import HTTPException, Request
+from starlette.datastructures import UploadFile
+from starlette.responses import RedirectResponse
+
+# Секретный ключ для JWT (в реальном приложении брать из переменных окружения)
+SECRET_KEY = "your-super-secret-key-minimum-32-characters"
+ALGORITHM = "HS256"
 
 
-class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
-    """Авторизационный код грант с PKCE."""
+class OIDCServer:
+    """Простой OIDC сервер, использующий зависимости из request.app.state."""
 
-    async def authenticate_user(self, authorization_code: str) -> Coroutine[Any, Any, dict[str, Any] | None] | None:
-        """По коду получить пользователя."""
-        code_data = await get_authorization_code(authorization_code)
-        if not code_data:
-            return None
-        user = get_user_by_id(code_data["user_id"])
+    def __init__(self):
+        self.secret_key = SECRET_KEY
+        self.algorithm = ALGORITHM
+
+    async def authorize(
+        self,
+        request: Request,
+        client_id: str,
+        redirect_uri: str,
+        response_type: str,
+        scope: str,
+        state: str | None = None,
+    ):
+        """Эндпоинт авторизации."""
+        # Получаем зависимости из state
+        oauth_client_db = request.app.state.oauth_client_db
+        oauth_code_db = request.app.state.oauth_code_db
+
+        # Проверяем клиента
+        client = await oauth_client_db.get_client(client_id)
+        if not client or not client.get("is_active"):
+            raise HTTPException(400, "Invalid client")
+
+        # Проверяем redirect_uri
+        allowed_uris = client.get("redirect_uris", "").split()
+        if redirect_uri not in allowed_uris:
+            raise HTTPException(400, "Invalid redirect_uri")
+
+        # Проверяем response_type
+        if response_type != "code":
+            raise HTTPException(400, "Only authorization_code flow is supported")
+
+        user = request.session.get("user")
         if not user:
-            return None
-        await delete_authorization_code(authorization_code)
-        return user
+            # Сохраняем параметры и отправляем на логин
+            request.session["oauth_params"] = {
+                "client_id": client_id,
+                "redirect_uri": redirect_uri,
+                "scope": scope,
+                "state": state,
+            }
+            return RedirectResponse(url="/oidc/login")
 
-    def save_authorization_code(self, code: str, request: OAuth2Request) -> None:
-        """Сохранить код авторизации."""
-        save_authorization_code(
+        # Генерируем код
+        code = secrets.token_urlsafe(32)
+        await oauth_code_db.save_code(
             code=code,
-            client_id=request.client.client_id,
-            redirect_uri=request.redirect_uri,
-            user_id=request.user["id"],
-            scope=request.scope,
-            nonce=request.data.get("nonce"),
-            code_challenge=request.data.get("code_challenge"),
-            code_challenge_method=request.data.get("code_challenge_method"),
+            client_id=client_id,
+            redirect_uri=redirect_uri,
+            user_id=user["id"],
+            scope=scope,
+            nonce=None,
+            code_challenge=None,
+            code_challenge_method=None,
         )
 
+        # Редирект обратно с кодом
+        redirect_url = f"{redirect_uri}?code={code}"
+        if state:
+            redirect_url += f"&state={state}"
 
-class RefreshTokenGrant(grants.RefreshTokenGrant):
-    """Грант обновления токена."""
+        return RedirectResponse(url=redirect_url)
 
-    async def authenticate_refresh_token(self, refresh_token: str) -> Coroutine[Any, Any, dict[str, Any] | None] | None:
-        """Проверить refresh token."""
-        token = await get_token(refresh_token=refresh_token)
-        if not token or token["is_revoked"]:
-            return None
-        return token
+    async def token(self, request: Request):
+        """Токен эндпоинт."""
+        form = await request.form()
+        grant_type = form.get("grant_type")
+        client_id = form.get("client_id")
+        client_secret = form.get("client_secret")
 
-    async def revoke_old_credential(self, credential: dict[str, Any]) -> None:
-        """Отозвать старый refresh token."""
-        await revoke_token(credential["refresh_token"])
+        # Проверяем, что обязательные параметры являются строками
+        if not isinstance(grant_type, str) or not isinstance(client_id, str) or not isinstance(client_secret, str):
+            raise HTTPException(400, "Invalid or missing form parameters")
 
+        # Получаем зависимости из state
+        oauth_client_db = request.app.state.oauth_client_db
+        oauth_code_db = request.app.state.oauth_code_db
+        oauth_token_db = request.app.state.oauth_token_db
+        user_db = request.app.state.user_db
 
-class PasswordGrant(grants.ResourceOwnerPasswordCredentialsGrant):
-    """Грант пароль (для OAuth2, не OIDC)."""
+        # Проверяем клиента
+        client = await oauth_client_db.get_client(client_id)
+        if not client or not client.get("is_active"):
+            raise HTTPException(401, "Invalid client")
 
-    async def authenticate_user(self, username: str, password: str) -> dict[str, Any] | None:
-        from auth.user_source import authenticate_user  # избегаем циклического импорта
-        user = await authenticate_user(username, password)
-        return user
+        if client.get("client_secret") != client_secret:
+            raise HTTPException(401, "Invalid client secret")
 
+        if grant_type == "authorization_code":
+            code = form.get("code")
+            redirect_uri = form.get("redirect_uri")
 
-class ClientCredentialsGrant(grants.ClientCredentialsGrant):
-    """Грант учётных данных клиента."""
+            if not isinstance(code, str) or not isinstance(redirect_uri, str):
+                raise HTTPException(400, "Invalid or missing code/redirect_uri")
 
-    @staticmethod
-    def authenticate_client(request: OAuth2Request) -> bool:
-        return request.client is not None
+            # Проверяем код
+            code_data = await oauth_code_db.get_code(code)
+            if not code_data:
+                raise HTTPException(400, "Invalid code")
+
+            if code_data["client_id"] != client_id:
+                raise HTTPException(400, "Code client mismatch")
+
+            if code_data["redirect_uri"] != redirect_uri:
+                raise HTTPException(400, "Redirect URI mismatch")
+
+            user = await user_db.get_by_id(code_data["user_id"])
+            if not user:
+                raise HTTPException(400, "User not found")
+
+            # Удаляем использованный код
+            await oauth_code_db.delete_code(code)
+
+            # Генерируем токены (теперь client_id гарантированно str)
+            access_token = self._create_access_token(user, client_id, code_data["scope"])
+            refresh_token: str | None | UploadFile = secrets.token_urlsafe(32)
+            id_token = self._create_id_token(user, client_id)
+
+            # Сохраняем токен
+            await oauth_token_db.save_token(
+                token={
+                    "access_token": access_token,
+                    "refresh_token": refresh_token,
+                    "expires_in": 3600,
+                },
+                client_id=client_id,
+                user_id=user["id"],
+                scope=code_data["scope"],
+            )
+
+            return {
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "id_token": id_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            }
+
+        elif grant_type == "refresh_token":
+            refresh_token = form.get("refresh_token")
+
+            if not isinstance(refresh_token, str):
+                raise HTTPException(400, "Invalid or missing refresh_token")
+
+            token_data = await oauth_token_db.get_token_by_refresh(refresh_token)
+            if not token_data or token_data.get("is_revoked"):
+                raise HTTPException(400, "Invalid refresh token")
+
+            if token_data["client_id"] != client_id:
+                raise HTTPException(400, "Client mismatch")
+
+            user = await user_db.get_by_id(token_data["user_id"])
+            if not user:
+                raise HTTPException(400, "User not found")
+
+            # Удаляем старый токен
+            await oauth_token_db.revoke_token(refresh_token)
+
+            # Генерируем новые токены
+            new_access_token = self._create_access_token(user, client_id, token_data["scope"])
+            new_refresh_token = secrets.token_urlsafe(32)
+
+            # Уникальный суффикс для access token
+            unique_suffix = secrets.token_hex(8)
+            new_access_token = f"{new_access_token}_{unique_suffix}"
+
+            await oauth_token_db.save_token(
+                token={"access_token": new_access_token, "expires_in": 3600},
+                client_id=client_id,
+                user_id=user["id"],
+                scope=token_data["scope"],
+                refresh_token=new_refresh_token,
+            )
+
+            return {
+                "access_token": new_access_token,
+                "refresh_token": new_refresh_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            }
+
+        elif grant_type == "client_credentials":
+            # Для сервисных аккаунтов
+            access_token = self._create_access_token(
+                {"id": 0, "username": "service"},
+                client_id,
+                "",
+            )
+            return {
+                "access_token": access_token,
+                "token_type": "Bearer",
+                "expires_in": 3600,
+            }
+
+        else:
+            raise HTTPException(400, "Unsupported grant_type")
+
+    async def userinfo(self, request: Request):
+        """Userinfo эндпоинт."""
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(401, "Missing or invalid token")
+
+        token = auth_header.replace("Bearer ", "")
+
+        try:
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+        except jwt.InvalidTokenError:
+            raise HTTPException(401, "Invalid token")
+
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(401, "Invalid token payload")
+
+        user_db = request.app.state.user_db
+        user = await user_db.get_by_id(int(user_id))
+        if not user:
+            raise HTTPException(401, "User not found")
+
+        return {
+            "sub": str(user["id"]),
+            "username": user.get("username", ""),
+            "email": user.get("email", ""),
+            "preferred_username": user.get("username", ""),
+        }
+
+    async def jwks(self, request: Request):
+        """JWKS эндпоинт."""
+        # Для HS256 ключи не публикуются, но эндпоинт должен существовать
+        return {"keys": []}
+
+    async def openid_configuration(self, request: Request):
+        """Discovery эндпоинт."""
+        base_url = str(request.base_url).rstrip("/")
+        return {
+            "issuer": base_url,
+            "authorization_endpoint": f"{base_url}/oidc/authorize",
+            "token_endpoint": f"{base_url}/oidc/token",
+            "userinfo_endpoint": f"{base_url}/oidc/userinfo",
+            "jwks_uri": f"{base_url}/oidc/jwks",
+            "response_types_supported": ["code"],
+            "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
+            "subject_types_supported": ["public"],
+            "id_token_signing_alg_values_supported": ["HS256"],
+        }
+
+    def _create_access_token(self, user: dict, client_id: str, scope: str) -> str:
+        """Создание access token."""
+        payload = {
+            "sub": str(user["id"]),
+            "client_id": client_id,
+            "scope": scope,
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
+        }
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+
+    def _create_id_token(self, user: dict, client_id: str) -> str:
+        """Создание ID token."""
+        payload = {
+            "iss": "http://localhost:8000",
+            "sub": str(user["id"]),
+            "aud": client_id,
+            "exp": datetime.now(UTC) + timedelta(hours=1),
+            "iat": datetime.now(UTC),
+            "email": user.get("email", ""),
+            "preferred_username": user.get("username", ""),
+        }
+        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
 
 
 async def create_authorization_server():
-    """Фабрика OIDC-сервера."""
-    server = StarletteAuthorizationServer()
-    server.register_grant(AuthorizationCodeGrant, [CodeChallenge(required=True)])
-    server.register_grant(RefreshTokenGrant)
-    server.register_grant(PasswordGrant)
-    server.register_grant(ClientCredentialsGrant)
-
-    # Функция загрузки OAuth клиента по client_id
-    async def query_client(client_id: str):
-        client = await get_oauth_client(client_id)
-        if client:
-            return OAuthClientModel(
-                client_id=client["client_id"],
-                client_secret=client["client_secret"],
-                client_id_issued_at=client["client_id_issued_at"],
-                client_secret_expires_at=client.get("client_secret_expires_at", 0),
-                redirect_uris=client["redirect_uris"],
-                grant_types=client.get("grant_types"),
-                response_types=client.get("response_types"),
-                scope=client.get("scope"),
-                token_endpoint_auth_method=client.get("token_endpoint_auth_method", "client_secret_basic"),
-            )
-        return None
-
-    server.query_client = query_client
-
-    def save_token(token: dict[str, Any], request: OAuth2Request) -> None:
-        server.save_token(token, request)
-
-    server.save_token = save_token
-
-    return server
+    """Создание OIDC сервера."""
+    return OIDCServer()

@@ -1,7 +1,6 @@
-"""OIDC эндпоинты."""
 from auth.user_source import authenticate_user
 from fastapi import APIRouter, Request
-from starlette.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from templates_static import templates
 
 router = APIRouter(prefix="/oidc", tags=["oidc"])
@@ -9,12 +8,16 @@ router = APIRouter(prefix="/oidc", tags=["oidc"])
 
 @router.get("/authorize")
 async def authorize(request: Request):
-    """Эндпоинт авторизации OIDC."""
-    user = request.session.get("user")
-    if not user:
-        request.session["next_url"] = str(request.url)
-        return RedirectResponse(url="/oidc/login")
-    return await request.app.state.oidc_server.create_authorize_response(request, user)
+    """Эндпоинт авторизации."""
+    params = request.query_params
+    return await request.app.state.oidc_server.authorize(
+        request=request,
+        client_id=params.get("client_id"),
+        redirect_uri=params.get("redirect_uri"),
+        response_type=params.get("response_type"),
+        scope=params.get("scope", ""),
+        state=params.get("state"),
+    )
 
 
 @router.get("/login")
@@ -25,45 +28,60 @@ async def login_page(request: Request):
 
 @router.post("/login")
 async def login(request: Request):
-    """Обработка формы логина."""
+    """Обработка логина."""
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
+
     if not username or not password:
         return templates.TemplateResponse(
             "login.html",
             {"request": request, "error": "Введите логин и пароль"},
         )
-    user = await authenticate_user(username, password)
+
+    user = await authenticate_user(request, username, password)   # передаём request
     if not user:
         return templates.TemplateResponse(
             "login.html",
             {"request": request, "error": "Неверный логин или пароль"},
         )
+
     request.session["user"] = user
+
+    oauth_params = request.session.pop("oauth_params", {})
+    if oauth_params:
+        redirect_url = f"/oidc/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params['scope']}"
+        if oauth_params.get('state'):
+            redirect_url += f"&state={oauth_params['state']}"
+        return RedirectResponse(url=redirect_url)
+
     next_url = request.session.pop("next_url", "/")
     return RedirectResponse(url=next_url)
 
 
 @router.post("/token")
 async def token(request: Request):
-    """Эндпоинт для получения токенов."""
-    return await request.app.state.oidc_server.create_token_response(request)
+    """Токен эндпоинт."""
+    result = await request.app.state.oidc_server.token(request)
+    return JSONResponse(result)
 
 
 @router.get("/userinfo")
 async def userinfo(request: Request):
-    """Эндпоинт userinfo."""
-    return await request.app.state.oidc_server.create_userinfo_response(request)
-
-
-@router.get("/.well-known/openid-configuration")
-async def openid_configuration(request: Request):
-    """Discovery документ."""
-    return await request.app.state.oidc_server.create_well_known_openid_configuration(request)
+    """Userinfo эндпоинт."""
+    result = await request.app.state.oidc_server.userinfo(request)
+    return JSONResponse(result)
 
 
 @router.get("/jwks")
 async def jwks(request: Request):
-    """Публичные JWK ключи."""
-    return await request.app.state.oidc_server.create_jwks()
+    """JWKS эндпоинт."""
+    result = await request.app.state.oidc_server.jwks(request)
+    return JSONResponse(result)
+
+
+@router.get("/.well-known/openid-configuration")
+async def openid_configuration(request: Request):
+    """Discovery эндпоинт."""
+    result = await request.app.state.oidc_server.openid_configuration(request)
+    return JSONResponse(result)

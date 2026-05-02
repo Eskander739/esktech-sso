@@ -1,18 +1,13 @@
-"""Проверка лимитов Community версии."""
-from config import settings
-from db.crud import count_oauth_clients
-from utils.license import is_enterprise
+"""Утилиты для проверки лимитов."""
+from fastapi import Request
 
 
-async def check_clients_limit() -> bool:
-    """Проверка, не превышен ли лимит на количество OIDC клиентов."""
-    if is_enterprise(settings.LICENSE_KEY):
-        return True
-    current = await count_oauth_clients()
-    return current < settings.COMMUNITY_MAX_CLIENTS
+async def count_oauth_clients(request: Request) -> int:
+    """Возвращает количество активных OAuth клиентов."""
+    return await request.app.state.oauth_client_db.count_active_clients()
 
 
-async def check_sources_limit() -> bool:
-    if is_enterprise(settings.LICENSE_KEY):
-        return True
-    return not (settings.LDAP_URI and not is_enterprise(settings.LICENSE_KEY))
+async def check_clients_limit(request: Request) -> bool:
+    """Проверяет, не превышен ли лимит клиентов (макс. 2 для community)."""
+    count = await count_oauth_clients(request)
+    return count < 2

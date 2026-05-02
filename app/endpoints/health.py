@@ -1,6 +1,5 @@
 """Healthchecks для мониторинга."""
-from db.database import async_session_maker
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -12,9 +11,9 @@ async def liveness():
 
 
 @router.get("/ready")
-async def readiness():
+async def readiness(request: Request):
     try:
-        async with async_session_maker() as session:
+        async with request.app.state.db_pool.get_connection() as session:
             await session.execute("SELECT 1")
         return {"status": "ready"}
     except SQLAlchemyError as e:

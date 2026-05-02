@@ -1,16 +1,39 @@
 import random
 
 import pytest
-from db.crud import create_user, get_user_by_username
-from db.database import close_db, init_db
+from main import app
 
 
 @pytest.mark.asyncio
 async def test_create_and_get_user():
-    await init_db()
+    """Тест создания и получения пользователя через глобальные фикстуры."""
+    user_db = app.state.user_db
+
+    # Генерируем случайные данные
     username = f"testuser{random.randint(10000, 99999)}"
-    await create_user(username, f"test{random.randint(10000, 99999)}@example.com", "hashed", "Test User")
-    user = await get_user_by_username(username)
+    email = f"test{random.randint(10000, 99999)}@example.com"
+
+    # Создаём пользователя
+    user_id = await user_db.create(
+        username=username,
+        email=email,
+        hashed_password="hashed_password_here",
+        full_name="Test User",
+        is_active=True
+    )
+
+    # Получаем пользователя по username
+    user = await user_db.get_by_username(username)
+
+    # Проверяем
     assert user is not None
     assert user["username"] == username
-    await close_db()
+    assert user["email"] == email
+    assert user["full_name"] == "Test User"
+    assert user["is_active"] is True
+
+    # Получаем пользователя по ID
+    user_by_id = await user_db.get_by_id(user_id)
+    assert user_by_id is not None
+    assert user_by_id["id"] == user_id
+    assert user_by_id["username"] == username
