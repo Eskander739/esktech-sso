@@ -3,7 +3,6 @@ import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_authorize_redirect(client: AsyncClient, test_client_app):
     """Тест редиректа на страницу логина."""

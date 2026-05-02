@@ -34,7 +34,6 @@ class DBPool:
             await connection.commit()  # Явный коммит
 
     async def close_pool(self):
-        await self.async_session().close_all()
         await self.engine.dispose()
 
     @asynccontextmanager

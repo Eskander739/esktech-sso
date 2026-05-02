@@ -44,7 +44,9 @@ profile = "black"
 asyncio_mode = "auto"
 testpaths = ["tests"]
 filterwarnings = [
-    "ignore::PendingDeprecationWarning:starlette.formparsers"
+    "ignore::PendingDeprecationWarning:starlette.formparsers",
+    "ignore::UserWarning:jwt.api_jwt",
+    'ignore:The `name` is not the first parameter:DeprecationWarning:starlette'
 ]
 
 [tool.mypy]

@@ -14,7 +14,6 @@ def get_app(client: AsyncClient) -> Any:
     return transport.app  # type: ignore[attr-defined]
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_oidc_authorization_code_flow(client: AsyncClient):
     """Полный OIDC Authorization Code Flow."""
@@ -96,7 +95,6 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     return token_data["refresh_token"]
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_oidc_client_credentials_flow(client: AsyncClient):
     """OAuth2 Client Credentials Grant."""
@@ -116,7 +114,6 @@ async def test_oidc_client_credentials_flow(client: AsyncClient):
     assert "access_token" in token_resp.json()
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_oidc_refresh_token_flow(client: AsyncClient):
     """Обновление токена через refresh_token."""
@@ -201,7 +198,6 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     assert "access_token" in resp.json()
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_oidc_userinfo_endpoint(client: AsyncClient, auth_token):
     """Получение userinfo по access_token."""

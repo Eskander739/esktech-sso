@@ -20,14 +20,6 @@ TEST_DATABASE_URL = "postgresql+asyncpg://sso_user:sso_pass@localhost:5432/sso"
 settings.DATABASE_URL = TEST_DATABASE_URL
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Создаёт новый цикл событий для всех тестов."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
 @pytest.fixture(autouse=True, scope="function")
 async def setup_test_db():
     """Настройка тестовой БД для каждого теста с очисткой данных."""

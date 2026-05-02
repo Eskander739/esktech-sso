@@ -4,7 +4,6 @@ import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token):
     """Доступ к защищённому эндпоинту с валидным токеном."""
@@ -15,7 +14,6 @@ async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token)
     assert resp.status_code == 200
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.skip
 async def test_jwt_missing_token(client: AsyncClient):
@@ -25,7 +23,6 @@ async def test_jwt_missing_token(client: AsyncClient):
     assert "Bearer" in resp.headers.get("WWW-Authenticate", "")
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_jwt_invalid_token(client: AsyncClient):
     """Неверный токен."""
@@ -36,7 +33,6 @@ async def test_jwt_invalid_token(client: AsyncClient):
     assert resp.status_code == 401
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.skip
 async def test_jwt_expired_token(client: AsyncClient, expired_token):
@@ -49,7 +45,6 @@ async def test_jwt_expired_token(client: AsyncClient, expired_token):
     assert "expired" in resp.text.lower()
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_jwt_wrong_audience(client: AsyncClient):
     """Токен с неверной аудиторией."""
@@ -65,7 +60,6 @@ async def test_jwt_wrong_audience(client: AsyncClient):
     assert resp.status_code == 401
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_jwt_missing_sub_claim(client: AsyncClient):
     """Токен без sub."""
@@ -77,7 +71,6 @@ async def test_jwt_missing_sub_claim(client: AsyncClient):
     assert resp.status_code == 401
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 @pytest.mark.skip
 async def test_jwk_endpoint_returns_keys(client: AsyncClient):

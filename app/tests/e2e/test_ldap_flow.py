@@ -3,7 +3,6 @@ import pytest
 from httpx import AsyncClient
 
 
-@pytest.mark.e2e
 @pytest.mark.skip(reason="LDAP аутентификация не настроена в текущей версии")
 @pytest.mark.asyncio
 async def test_ldap_login_success(client: AsyncClient, ldap_test_server):
@@ -16,7 +15,6 @@ async def test_ldap_login_success(client: AsyncClient, ldap_test_server):
     assert "session" in response.cookies
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_ldap_login_invalid_credentials(client: AsyncClient):
     """Неверные учётные данные LDAP."""
@@ -28,7 +26,6 @@ async def test_ldap_login_invalid_credentials(client: AsyncClient):
     assert "Неверный логин или пароль" in response.text
 
 
-@pytest.mark.e2e
 @pytest.mark.asyncio
 async def test_ldap_login_missing_fields(client: AsyncClient):
     """Пустые поля логина."""
@@ -36,7 +33,6 @@ async def test_ldap_login_missing_fields(client: AsyncClient):
     assert "Введите логин и пароль" in response.text
 
 
-@pytest.mark.e2e
 @pytest.mark.skip(reason="LDAP аутентификация не настроена в текущей версии")
 @pytest.mark.asyncio
 async def test_ldap_user_data_sync(client: AsyncClient, ldap_test_server):

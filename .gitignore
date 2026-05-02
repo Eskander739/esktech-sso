@@ -2,6 +2,7 @@
 .pytest_cache/
 .pyc
 .db
+.env
 **/__pycache__/
 allure*
 test-file.txt
