@@ -45,32 +45,43 @@ docker run -d \
 ```
 
 ### Docker Compose (с PostgreSQL и Redis)
+#### Необходимо, чтобы запуск происходил из корневой директории проекта(где лежит Dockerfile, директория app и т.д)
 
 ```yaml
 version: '3.8'
-services:
-  esktech-sso:
-    image: esktech/sso:latest
-    ports:
-      - "8080:8080"
-    environment:
-      - DATABASE_URL=postgresql://user:pass@postgres:5432/esktech
-      - REDIS_URL=redis://redis:6379/0
-      - ADMIN_PASSWORD=admin123
-      - SECRET_KEY=your-secret-key
-    depends_on:
-      - postgres
-      - redis
 
-  postgres:
-    image: postgres:15
+services:
+  db:
+    image: postgres:16
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
-      - POSTGRES_DB=esktech
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD: sso_pass
+      POSTGRES_DB: sso
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sso_user:sso_pass@db:5432/sso
+      REDIS_URL: redis://redis:6379/0
+
+volumes:
+  postgres_data:
 ```
 ```bash
 docker-compose up -d
@@ -120,53 +131,51 @@ location = /validate {
 ### 🏗 Архитектура
 Монолит на FastAPI с модульной структурой:
 
-```text
-esktech-sso/
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── auth_server.py
-│   ├── db/
-│   │   ├── __init__.py
-│   │   ├── database.py
-│   │   ├── models.py
-│   │   └── crud.py
-│   ├── auth/
-│   │   ├── __init__.py
-│   │   ├── password_validator.py
-│   │   ├── ldap_client.py
-│   │   └── user_source.py
-│   ├── endpoints/
-│   │   ├── __init__.py
-│   │   ├── oidc.py
-│   │   ├── admin.py
-│   │   └── health.py
-│   ├── templates/
-│   │   └── login.html
-│   └── utils/
-│       ├── __init__.py
-│       ├── license.py
-│       └── limits.py
-├── tests/
-│   ├── __init__.py
-│   ├── conftest.py
-│   ├── unit/
-│   │   ├── __init__.py
-│   │   ├── test_password_validator.py
-│   │   └── test_limits.py
-│   ├── integration/
-│   │   ├── __init__.py
-│   │   └── test_db.py
-│   └── e2e/
-│       ├── __init__.py
-│       └── test_auth_flow.py
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-├── .env.example
-├── pyproject.toml
-└── Makefile
+```yaml
+esktech-sso
+├─ app/ # Основной код приложения
+│  ├── auth # Аутентификация
+│  │   ├── password_validator.py # Хеширование и проверка паролей (bcrypt)
+│  │   ├── ldap_client.py # Подключение к LDAP/Active Directory
+│  │   └── user_source.py # Абстракция: аутентификация через БД или LDAP
+│  ├── db # Работа с БД
+│  │   ├── database.py # Подключение к PostgreSQL (async), движок, сессии
+│  │   ├── models.py # SQLAlchemy модели (User, OAuthClient, OAuthCode, OAuthToken)
+│  │   └── crud.py # CRUD операции с БД (создание, чтение, обновление, удаление)
+│  ├── endpoints # API эндпоинты
+│  │   ├── oidc.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
+│  │   ├── admin.py # Админка OIDC-клиентов (создание, удаление)
+│  │   ├── users.py # CRUD пользователей (список, создание, редактирование, удаление)
+│  │   └── health.py # Healthchecks (/health/live, /health/ready)
+│  ├── schemas # Pydantic модели (UserCreate, UserUpdate)
+│  │   └── users.py # Модели пользователей для запросов
+│  ├── services # Бизнес-логика
+│  │   └── user_service.py # CRUD сервис для пользователей
+│  ├── templates_static # HTML шаблоны (Jinja2)
+│  │   ├── admin_clients.html # Админка OIDC-клиентов
+│  │   ├── admin_users.html # Список пользователей (админка)
+│  │   ├── admin_user_form.html # Форма создания/редактирования пользователя
+│  │   └── login.html # Страница логина
+│  ├── tests # Тесты
+│  │   ├── conftest.py # Фикстуры (клиент, БД для тестов)
+│  │   ├── unit # Unit-тесты
+│  │   ├── integration # Интеграционные тесты
+│  │   └── e2e # Сквозные тесты
+│  ├── utils # Утилиты
+│  │   ├── license.py # Проверка лицензии (Community / Enterprise)
+│  │   └── limits.py # Проверка лимитов Community (не более 2 клиентов / 1 источника)
+│  ├── auth_server.py # OIDC-сервер на Authlib (гранты, токены, клиенты)
+│  ├── config.py # Конфигурация (Pydantic Settings, переменные окружения)
+│  └── main.py # FastAPI приложение, lifespan, роутеры
+├── .env # Пример переменных окружения
+├── .env.example # Пример переменных окружения
+├── .gitignore # Файл для игнорирования мусора при работа с Git
+├── docker-compose.yml # PostgreSQL, Redis, приложение
+├── Dockerfile # Сборка образа (Python 3.12-slim + зависимости)
+├── LICENSE # AGPLv3
+├── Makefile # Утилиты: run, test, format, deps
+├── pyproject.toml # Poetry конфигурация (для разработки)
+└── requirements.txt # Python зависимости (pip)
 ```
 #### Стек: FastAPI + PostgreSQL + Redis + Docker
 

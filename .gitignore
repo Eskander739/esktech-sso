@@ -7,10 +7,9 @@ allure*
 test-file.txt
 pytest.log
 test_runner.py
-pyproject.toml
 # Default ignored files
 /workspace.xml
-
+poetry.lock
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
