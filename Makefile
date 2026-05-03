@@ -26,6 +26,9 @@ test-e2e:
 test-ldap:
 	cd app && PYTHONPATH=. pytest tests/e2e/test_ldap_flow.py -v
 
+test-opaque:
+	cd app && PYTHONPATH=. pytest tests/e2e/test_opaque_flow.py -v
+
 test-oidc:
 	cd app && PYTHONPATH=. pytest tests/e2e/test_oidc_flow.py -v
 

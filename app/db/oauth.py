@@ -2,6 +2,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from constants import AccessTokenFormat
 from db.models.auth_models import OAuthClient, OAuthCode, OAuthToken
 from services.db_pool import DBPool
 from sqlalchemy import delete, select, update
@@ -51,7 +52,7 @@ class OAuthClientDB:
             client = OAuthClient(
                 client_id=client_id,
                 client_secret=client_secret,
-                client_id_issued_at=datetime.now(UTC),  # с часовым поясом
+                client_id_issued_at=datetime.now(UTC),
                 redirect_uris=redirect_uris,
                 grant_types=grant_types,
                 response_types=response_types,
@@ -77,7 +78,7 @@ class OAuthCodeDB:
         code_challenge: str | None,
         code_challenge_method: str | None,
     ) -> None:
-        expires_at = datetime.now(UTC) + timedelta(minutes=10)  # с часовым поясом
+        expires_at = datetime.now(UTC) + timedelta(minutes=10)
         async with self.db_pool.get_connection() as session:
             oauth_code = OAuthCode(
                 code=code,
@@ -99,7 +100,6 @@ class OAuthCodeDB:
             result = await session.execute(stmt)
             entry = result.scalar_one_or_none()
             if entry:
-                # Приводим expires_at к timezone-aware если он naive
                 expires_at = entry.expires_at
                 if expires_at.tzinfo is None:
                     expires_at = expires_at.replace(tzinfo=UTC)
@@ -133,12 +133,14 @@ class OAuthTokenDB:
         user_id: int | None,
         scope: str | None,
         refresh_token: str | None = None,
+        token_type: str = AccessTokenFormat.JWT,
     ) -> None:
-        expires_at = datetime.now(UTC) + timedelta(seconds=token.get("expires_in", 3600))  # с часовым поясом
+        expires_at = datetime.now(UTC) + timedelta(seconds=token.get("expires_in", 3600))
         async with self.db_pool.get_connection() as session:
             new_token = OAuthToken(
                 client_id=client_id,
                 user_id=user_id,
+                token_type=token_type,
                 access_token=token["access_token"],
                 refresh_token=refresh_token or token.get("refresh_token"),
                 scope=scope,
@@ -147,13 +149,32 @@ class OAuthTokenDB:
             session.add(new_token)
             await session.commit()
 
+    async def get_token_by_access(self, access_token: str) -> dict[str, Any] | None:
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthToken).where(OAuthToken.access_token == access_token)  # type: ignore
+            result = await session.execute(stmt)
+            token = result.scalar_one_or_none()
+            if token and not token.is_revoked:
+                expires_at = token.expires_at
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                if expires_at > datetime.now(UTC):
+                    return {
+                        "access_token": token.access_token,
+                        "client_id": token.client_id,
+                        "user_id": token.user_id,
+                        "scope": token.scope,
+                        "token_type": token.token_type,
+                        "is_revoked": token.is_revoked,
+                    }
+            return None
+
     async def get_token_by_refresh(self, refresh_token: str) -> dict[str, Any] | None:
         async with self.db_pool.get_connection() as session:
             stmt = select(OAuthToken).where(OAuthToken.refresh_token == refresh_token)  # type: ignore
             result = await session.execute(stmt)
             token = result.scalar_one_or_none()
             if token and not token.is_revoked:
-                # Приводим expires_at к timezone-aware если он naive
                 expires_at = token.expires_at
                 if expires_at.tzinfo is None:
                     expires_at = expires_at.replace(tzinfo=UTC)
@@ -172,6 +193,15 @@ class OAuthTokenDB:
             await session.execute(
                 update(OAuthToken)
                 .where(OAuthToken.refresh_token == refresh_token) # type: ignore
+                .values(is_revoked=True)
+            )
+            await session.commit()
+
+    async def revoke_access_token(self, access_token: str) -> None:
+        async with self.db_pool.get_connection() as session:
+            await session.execute(
+                update(OAuthToken)
+                .where(OAuthToken.access_token == access_token) # type: ignore
                 .values(is_revoked=True)
             )
             await session.commit()

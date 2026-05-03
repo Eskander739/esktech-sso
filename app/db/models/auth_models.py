@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from constants import AccessTokenFormat
 from db.models.base import Base
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 
@@ -41,6 +42,7 @@ class OAuthToken(Base):
     id = Column(Integer, primary_key=True)
     client_id = Column(String(255), nullable=False)
     user_id = Column(Integer, nullable=True)
+    token_type = Column(String(50), default=AccessTokenFormat.JWT)  # "jwt" или "opaque"
     access_token = Column(String(255), unique=True, nullable=False)
     refresh_token = Column(String(255), unique=True, nullable=True)
     scope = Column(String(255), nullable=True)
