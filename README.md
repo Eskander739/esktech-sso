@@ -115,7 +115,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 2. Укажите Issuer URL, Client ID, Client Secret (из админки EskTech)
 3. Включите SSO
 
-### 1С (через Nginx-прокси)
+### 1С (через Nginx-прокси) - ведется разработка
 ```nginx
 location / {
     auth_request /validate;
@@ -128,7 +128,7 @@ location = /validate {
     proxy_set_header Authorization "Bearer $http_authorization";
 }
 ```
-### Битрикс24 On-Premise (LDAP)
+### Битрикс24 On-Premise (LDAP)  - ведется разработка
 Настройте LDAP-адаптер в Битрикс24, указав EskTech как LDAP-сервер
 
 ### 🏗 Архитектура
