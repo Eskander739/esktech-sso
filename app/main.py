@@ -8,6 +8,8 @@ from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
 from endpoints import admin, health, oidc, users
 from fastapi import FastAPI
+
+from log import logger
 from services.db_pool import DBPool
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -24,6 +26,7 @@ async def lifespan(app_local: Any):
     app_local.state.oauth_code_db = OAuthCodeDB(db_pool)
     app_local.state.oauth_token_db = OAuthTokenDB(db_pool)
     app_local.state.user_db = UserDB(db_pool)
+    app_local.state.logger = logger
 
     yield
     if hasattr(app_local.state, "db_pool"):

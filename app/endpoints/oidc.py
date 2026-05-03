@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from models.msg import Message
 from services.localization import _
 from templates_static import templates
-from utils.user_source import authenticate_user
+from utils.password_validator import verify_password
 
 router = APIRouter(prefix="/oidc", tags=["oidc"])
 
@@ -40,13 +40,20 @@ async def login(request: Request):
             "login.html",
             {"request": request, "error": _(Message.input_login_and_password)},
         )
-
-    user = await authenticate_user(request, username, password)
+    user = await request.app.state.user_db.get_by_email(username)
     if not user:
+        request.app.state.logger.error(f"Не найден пользователь {username}")
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": _(Message.invalid_password_or_login)},
+            {"request": request, "error": _(Message.user_not_found)},
         )
+    else:
+        if not verify_password(password, user["hashed_password"]):
+            request.app.state.logger.error(f"Неверный пароль для пользователя {username}")
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "error": _(Message.invalid_password_or_login)},
+            )
 
     request.session["user"] = user
 
