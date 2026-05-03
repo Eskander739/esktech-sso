@@ -1,3 +1,6 @@
+[![Stars](https://img.shields.io/github/stars/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
+[![Forks](https://img.shields.io/github/forks/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 # EskTech SSO — лёгкий корпоративный SSO на Python
 
 ![License](https://img.shields.io/badge/license-AGPLv3-blue.svg)
