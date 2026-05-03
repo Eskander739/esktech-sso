@@ -1,13 +1,16 @@
 """Конфигурация приложения."""
+from constants import AccessTokenFormat
 from pydantic import Field
 from pydantic_settings import BaseSettings
+from utils.secrets import get_or_create_secret_key
 
 
 class Settings(BaseSettings):
     """Настройки приложения."""
 
     # Общие
-    SECRET_KEY: str = Field(..., validation_alias="SECRET_KEY")
+    SECRET_KEY: str = Field(default_factory=get_or_create_secret_key)
+    ACCESS_TOKEN_FORMAT: str = Field(AccessTokenFormat.JWT, validation_alias="ACCESS_TOKEN_FORMAT")
     DEBUG: bool = Field(False, validation_alias="DEBUG")
 
     # База данных
@@ -21,7 +24,8 @@ class Settings(BaseSettings):
     )
 
     # OIDC
-    ISSUER: str = Field("https://sso.esktech.ru", validation_alias="ISSUER")
+    ISSUER: str = Field("http://localhost:8000", validation_alias="ISSUER")
+    # ISSUER: str = Field("https://sso.esktech.ru", validation_alias="ISSUER")
     OIDC_CLIENT_ID: str = Field("", validation_alias="OIDC_CLIENT_ID")
     OIDC_CLIENT_SECRET: str = Field("", validation_alias="OIDC_CLIENT_SECRET")
 

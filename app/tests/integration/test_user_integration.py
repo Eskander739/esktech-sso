@@ -1,8 +1,8 @@
 """Интеграционные тесты для пользователей."""
 import pytest
-from auth.password_validator import hash_password
 from main import app
 from sqlalchemy.exc import IntegrityError
+from utils.password_validator import hash_password
 
 
 @pytest.mark.asyncio

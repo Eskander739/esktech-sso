@@ -1,4 +1,4 @@
-from auth.password_validator import hash_password, verify_password
+from utils.password_validator import hash_password, verify_password
 
 
 def test_hash_and_verify():

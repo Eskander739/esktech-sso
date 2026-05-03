@@ -8,8 +8,10 @@ deps:
 
 run:
 	docker-compose up
+run-server:
+	cd app && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-test:
+test: # Тяжелые тесты! Необходим podman, e2e тесты загружают тяжелые образы, первый запуск будет долгим(максимальный размер образа 1.6 GB - Gitlab)
 	cd app && PYTHONPATH=. pytest tests/
 
 test-unit:

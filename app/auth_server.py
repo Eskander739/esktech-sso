@@ -3,6 +3,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 import jwt
+from config import settings
 from fastapi import HTTPException, Request, status
 from starlette.datastructures import UploadFile
 from starlette.responses import RedirectResponse
@@ -248,13 +249,12 @@ class OIDCServer:
 
     async def openid_configuration(self, request: Request):
         """Discovery эндпоинт."""
-        base_url = str(request.base_url).rstrip("/")
         return {
-            "issuer": base_url,
-            "authorization_endpoint": f"{base_url}/oidc/authorize",
-            "token_endpoint": f"{base_url}/oidc/token",
-            "userinfo_endpoint": f"{base_url}/oidc/userinfo",
-            "jwks_uri": f"{base_url}/oidc/jwks",
+            "issuer": settings.ISSUER,
+            "authorization_endpoint": f"{settings.ISSUER}/oidc/authorize",
+            "token_endpoint": f"{settings.ISSUER}/oidc/token",
+            "userinfo_endpoint": f"{settings.ISSUER}/oidc/userinfo",
+            "jwks_uri": f"{settings.ISSUER}/oidc/jwks",
             "response_types_supported": ["code"],
             "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
             "subject_types_supported": ["public"],
@@ -275,7 +275,7 @@ class OIDCServer:
     def _create_id_token(self, user: dict, client_id: str) -> str:
         """Создание ID token."""
         payload = {
-            "iss": "http://localhost:8000",
+            "iss": settings.ISSUER,
             "sub": str(user["id"]),
             "aud": client_id,
             "exp": datetime.now(UTC) + timedelta(hours=1),

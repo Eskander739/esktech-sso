@@ -1,3 +1,5 @@
+from enum import Enum
+
 REDIS_POOL_SIZE = 10
 DB_POOL_SIZE = 10
 WS_POOL_SIZE = 10
@@ -11,3 +13,7 @@ class ApiVersion:
 
 PROD_ENV = "opt/fast-api-users.env"
 CODE_EXPIRE_MINUTES = 5
+
+class AccessTokenFormat(str, Enum):
+    OPAQUE = "opaque" # возможность отзывать токены (JWT нельзя отозвать, он живёт, пока не истечёт)
+    JWT = "jwt"

@@ -1,9 +1,9 @@
 """Управление пользователями (CRUD) для администратора."""
-from auth.password_validator import hash_password
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from templates_static import templates
+from utils.password_validator import hash_password
 
 router = APIRouter(prefix="/admin/users", tags=["admin"])
 

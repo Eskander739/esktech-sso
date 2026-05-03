@@ -52,7 +52,7 @@ class DefaultLogger:
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
 
-        except Exception as err:
+        except (OSError, PermissionError) as err:
             self.logger.warning(f"Ошибка при настройке файлового логирования: {err}")
 
     def info(self, message: str, *args, **kwargs):
@@ -75,10 +75,9 @@ class DefaultLogger:
         """Логирование критической ошибки"""
         self.logger.critical(message, *args, **kwargs)
 
-    def exception(self, message: str, exc_info: bool = True, *args, **kwargs):
+    def exception(self, message: str, *args, exc_info: bool = True, **kwargs):
         """Логирование исключения с трассировкой"""
-        self.logger.exception(message, exc_info=exc_info, *args, **kwargs)
-
+        self.logger.exception(message, *args, exc_info=exc_info, **kwargs)
 
 # Глобальный экземпляр логгера
 logger = DefaultLogger()

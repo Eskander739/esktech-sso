@@ -1,5 +1,5 @@
-from auth.password_validator import verify_password
 from fastapi import Request
+from utils.password_validator import verify_password
 
 
 async def authenticate_user(request: Request, username: str, password: str):

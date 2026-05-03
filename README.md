@@ -137,14 +137,14 @@ location = /validate {
 ```yaml
 esktech-sso
 ├─ app/ # Основной код приложения
-│  ├── auth # Аутентификация
-│  │   ├── password_validator.py # Хеширование и проверка паролей (bcrypt)
-│  │   ├── ldap_client.py # Подключение к LDAP/Active Directory
-│  │   └── user_source.py # Абстракция: аутентификация через БД или LDAP
 │  ├── db # Работа с БД
 │  │   ├── database.py # Подключение к PostgreSQL (async), движок, сессии
 │  │   ├── models.py # SQLAlchemy модели (User, OAuthClient, OAuthCode, OAuthToken)
-│  │   └── crud.py # CRUD операции с БД (создание, чтение, обновление, удаление)
+│  │   │   ├── auth_models.py # Модели авторизации
+│  │   │   ├── base.py # Базовая модель
+│  │   │   └── user_models.py # Модели пользователей
+│  │   ├── oauth.py # Класс для взаимодействия с авторизацией
+│  │   └── users.py # Класс для взаимодействия с пользователями
 │  ├── endpoints # API эндпоинты
 │  │   ├── oidc.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
 │  │   ├── admin.py # Админка OIDC-клиентов (создание, удаление)
@@ -153,22 +153,29 @@ esktech-sso
 │  ├── schemas # Pydantic модели (UserCreate, UserUpdate)
 │  │   └── users.py # Модели пользователей для запросов
 │  ├── services # Бизнес-логика
-│  │   └── user_service.py # CRUD сервис для пользователей
+│  │   └── db_pool.py # Пул соединений с базой данных
 │  ├── templates_static # HTML шаблоны (Jinja2)
 │  │   ├── admin_clients.html # Админка OIDC-клиентов
 │  │   ├── admin_users.html # Список пользователей (админка)
 │  │   ├── admin_user_form.html # Форма создания/редактирования пользователя
 │  │   └── login.html # Страница логина
 │  ├── tests # Тесты
-│  │   ├── conftest.py # Фикстуры (клиент, БД для тестов)
-│  │   ├── unit # Unit-тесты
+│  │   ├── e2e # Сквозные тесты
 │  │   ├── integration # Интеграционные тесты
-│  │   └── e2e # Сквозные тесты
+│  │   ├── unit # Unit-тесты
+│  │   ├── config_tests_sample.py # Конфиг тестов
+│  │   └── conftest.py # Фикстуры (клиент, БД для тестов)
 │  ├── utils # Утилиты
+│  │   ├── cli.py # CLI для взаимодействия с командной строкой
+│  │   ├── ldap_client.py # Подключение к LDAP/Active Directory
 │  │   ├── license.py # Проверка лицензии (Community / Enterprise)
-│  │   └── limits.py # Проверка лимитов Community (не более 2 клиентов / 1 источника)
+│  │   ├── limits.py # Проверка лимитов Community (не более 2 клиентов / 1 источника)
+│  │   ├── password_validator.py # Хеширование и проверка паролей (bcrypt)
+│  │   └── user_source.py # Абстракция: аутентификация через БД или LDAP
 │  ├── auth_server.py # OIDC-сервер на Authlib (гранты, токены, клиенты)
 │  ├── config.py # Конфигурация (Pydantic Settings, переменные окружения)
+│  ├── constants.py # Константные переменные
+│  ├── log.py # Система логгирования
 │  └── main.py # FastAPI приложение, lifespan, роутеры
 ├── .env.example # Пример переменных окружения
 ├── .gitignore # Файл для игнорирования мусора при работа с Git

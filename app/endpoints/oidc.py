@@ -1,7 +1,7 @@
-from auth.user_source import authenticate_user
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from templates_static import templates
+from utils.user_source import authenticate_user
 
 router = APIRouter(prefix="/oidc", tags=["oidc"])
 
