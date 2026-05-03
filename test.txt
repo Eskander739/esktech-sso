@@ -1,4 +1,4 @@
-cd app && PYTHONPATH=. pytest tests/e2e/test_ldap_flow.py -v
+cd app && PYTHONPATH=. pytest tests/e2e/token_and_opaque -v
 ============================= test session starts ==============================
 platform linux -- Python 3.11.14, pytest-8.3.4, pluggy-1.6.0 -- /root/.cache/pypoetry/virtualenvs/esktech-sso-_8BmyJAP-py3.11/bin/python
 cachedir: .pytest_cache
@@ -6,12 +6,14 @@ rootdir: /home/eska/esktech-sso
 configfile: pyproject.toml
 plugins: asyncio-0.24.0, anyio-4.13.0
 asyncio: mode=Mode.AUTO, default_loop_scope=None
-collecting ... collected 4 items
+collecting ... collected 6 items
 
-tests/e2e/test_ldap_flow.py::test_ldap_login_success SKIPPED (Docker...) [ 25%]
-tests/e2e/test_ldap_flow.py::test_ldap_login_invalid_credentials SKIPPED [ 50%]
-tests/e2e/test_ldap_flow.py::test_ldap_login_missing_fields PASSED       [ 75%]
-tests/e2e/test_ldap_flow.py::test_ldap_user_data_sync SKIPPED (Docke...) [100%]
+tests/e2e/token_and_opaque/test_opaque_flow.py::test_authorization_code_flow_opaque PASSED [ 16%]
+tests/e2e/token_and_opaque/test_opaque_flow.py::test_refresh_token_opaque PASSED [ 33%]
+tests/e2e/token_and_opaque/test_token_revocation_flow.py::test_revoke_access_token_endpoint PASSED [ 50%]
+tests/e2e/token_and_opaque/test_token_revocation_flow.py::test_revoke_refresh_token_endpoint PASSED [ 66%]
+tests/e2e/token_and_opaque/test_token_revocation_flow.py::test_revoke_without_auth PASSED [ 83%]
+tests/e2e/token_and_opaque/test_token_revocation_flow.py::test_revoke_without_token PASSED [100%]
 
 =============================== warnings summary ===============================
 ../../../../root/.cache/pypoetry/virtualenvs/esktech-sso-_8BmyJAP-py3.11/lib/python3.11/site-packages/ldap3/utils/asn1.py:50
@@ -22,5 +24,21 @@ tests/e2e/test_ldap_flow.py::test_ldap_user_data_sync SKIPPED (Docke...) [100%]
   /root/.cache/pypoetry/virtualenvs/esktech-sso-_8BmyJAP-py3.11/lib/python3.11/site-packages/ldap3/utils/asn1.py:50: DeprecationWarning: typeMap is deprecated. Please use TYPE_MAP instead.
     from pyasn1.codec.ber.encoder import tagMap, typeMap, AbstractItemEncoder
 
+tests/e2e/token_and_opaque/test_token_revocation_flow.py:9
+  /home/eska/esktech-sso/app/tests/e2e/token_and_opaque/test_token_revocation_flow.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests/e2e/token_and_opaque/test_token_revocation_flow.py:96
+  /home/eska/esktech-sso/app/tests/e2e/token_and_opaque/test_token_revocation_flow.py:96: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests/e2e/token_and_opaque/test_token_revocation_flow.py:168
+  /home/eska/esktech-sso/app/tests/e2e/token_and_opaque/test_token_revocation_flow.py:168: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests/e2e/token_and_opaque/test_token_revocation_flow.py:180
+  /home/eska/esktech-sso/app/tests/e2e/token_and_opaque/test_token_revocation_flow.py:180: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=================== 1 passed, 3 skipped, 2 warnings in 0.09s ===================
+======================== 6 passed, 6 warnings in 2.51s =========================

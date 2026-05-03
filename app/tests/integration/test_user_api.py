@@ -2,6 +2,8 @@
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from models.msg import Message
+from services.localization import _
 
 
 @pytest.mark.asyncio
@@ -45,7 +47,7 @@ async def test_create_user_duplicate_error(client: AsyncClient, setup_test_db):
     # Пытаемся создать с тем же username
     response = await client.post("/admin/users/", json=user_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "Username already exists" in response.text
+    assert _(Message.user_is_already_registered) in response.text
 
 
 @pytest.mark.asyncio

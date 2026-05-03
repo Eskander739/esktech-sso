@@ -17,3 +17,8 @@ CODE_EXPIRE_MINUTES = 5
 class AccessTokenFormat(str, Enum):
     OPAQUE = "opaque" # возможность отзывать токены (JWT нельзя отозвать, он живёт, пока не истечёт)
     JWT = "jwt"
+
+class GrantType(str, Enum):
+    CLIENT_CREDENTIALS = "client_credentials"
+    REFRESH_TOKEN = "refresh_token"
+    AUTHORIZATION_CODE = "authorization_code"

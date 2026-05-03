@@ -7,7 +7,6 @@ import jwt
 import pytest
 from auth_server import create_authorization_server
 from config import settings
-from config_tests_sample import ConfigTestsSample
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
 from httpx import ASGITransport, AsyncClient
@@ -17,6 +16,7 @@ from main import app
 from services.db_pool import DBPool
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
+from tests.config_tests_sample import ConfigTestsSample
 from utils.cli import CLIControl
 from utils.password_validator import hash_password
 
@@ -424,7 +424,7 @@ async def test_client_app():
 async def auth_token(test_user, test_client_app):
     """Возвращает access token для тестового пользователя."""
     server = app.state.oidc_server
-    token = server._create_access_token(
+    token = server._create_jwt_access_token(
         user=test_user,
         client_id=test_client_app["client_id"],
         scope="openid profile email"

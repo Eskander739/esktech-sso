@@ -1,0 +1,178 @@
+msgid "Hello from fastapi-i18n!"
+msgstr "Привет от fastapi-i18!"
+
+# User messages
+
+msgid "User is not registered"
+msgstr "Пользователь не зарегистрирован"
+
+msgid "User was not updated"
+msgstr "Пользователь не был обновлен"
+
+msgid "Wrong password"
+msgstr "Неверный пароль"
+
+msgid "Access denied"
+msgstr "Доступ запрещен"
+
+msgid "Cannot block administrator"
+msgstr "Нельзя заблокировать администратора"
+
+msgid "Cannot verify administrator"
+msgstr "Нельзя верифицировать администратора"
+
+msgid "Cannot unverify administrator"
+msgstr "Нельзя снять верификацию администратора"
+
+msgid "User is not blocked"
+msgstr "Пользователь не заблокирован"
+
+msgid "User is not verified"
+msgstr "Пользователь не верифицирован"
+
+msgid "User is verified"
+msgstr "Пользователь верифицирован"
+
+msgid "User is blocked"
+msgstr "Пользователь заблокирован"
+
+msgid "Access is allowed only for administrator"
+msgstr "Доступ разрешен только для администратора"
+
+msgid "Invalid email"
+msgstr "Некорректная почта"
+
+msgid "Link is not valid, please repeat registration process"
+msgstr "Ссылка не актуальна, повторите процесс регистрации"
+
+msgid "Email is already confirmed"
+msgstr "Почта уже подтверждена"
+
+msgid "User image not deleted"
+msgstr "Изображение пользователя не удалено"
+
+msgid "User image not updated"
+msgstr "Изображение пользователя не обновлено"
+
+msgid "Token has expired"
+msgstr "Срок токена истек"
+
+# System messages
+msgid "Invalid JSON format"
+msgstr "Некорректный формат JSON"
+
+msgid "Internal error"
+msgstr "Внутренняя ошибка"
+
+msgid "Unknown error"
+msgstr "Неизвестная ошибка"
+
+msgid "Invalid or expired code"
+msgstr "Некорректный или истекший код"
+
+msgid "Unauthorized attempt to change email"
+msgstr "Несанкционированная попытка смены почты"
+
+msgid "An email with a code has been sent to your email address. You can resubmit your request in 1 minute"
+msgstr "Письмо с кодом отправлено на ваш email, повторный запрос можно будет отправить через 1 минуту"
+
+msgid "A confirmation email has been sent to your email address. You can resubmit your request in 5 minutes"
+msgstr "Письмо с подтверждением отправлено на ваш email, повторный запрос можно будет отправить через 5 минут"
+
+msgid "Authorization successful"
+msgstr "Авторизация успешно произведена"
+
+msgid "The exit was successful"
+msgstr "Выход успешно произведен"
+
+msgid "Email successfully confirmed!"
+msgstr "Почта успешно подтверждена!"
+
+msgid "User not blocked"
+msgstr "Пользователь не заблокирован"
+
+msgid "User blocked"
+msgstr "Пользователь заблокирован"
+
+msgid "User blocking status successfully changed"
+msgstr "Статус блокировки пользователя успешно изменен"
+
+# SSO
+
+msgid "Community limit: no more than 2 clients"
+msgstr "Community лимит: не более 2 клиентов"
+
+msgid "Token revoked"
+msgstr "Токен отозван"
+
+msgid "Invalid client credentials"
+msgstr "Неверные учетные данные клиента"
+
+msgid "Missing or invalid client credentials"
+msgstr "Отсутствуют или недействительны учетные данные клиента"
+
+msgid "Invalid password or login"
+msgstr "Неправильный пароль или логин"
+
+msgid "Token not found"
+msgstr "Токен не найден"
+
+msgid "Input login and password"
+msgstr "Введите логин и пароль"
+
+msgid "User is already registered"
+msgstr "Пользователь уже зарегистрирован"
+
+msgid "User not found"
+msgstr "Пользователь не найден"
+
+msgid "User updated"
+msgstr "Пользователь обновлен"
+
+msgid "User deleted"
+msgstr "Пользователь удален"
+
+msgid "Invalid token"
+msgstr "Некорректный токен"
+
+msgid "Invalid token payload"
+msgstr "Недопустимая полезная нагрузка токена"
+
+msgid "Missing or invalid token"
+msgstr "Отсутствует или недействителен токен"
+
+msgid "Unsupported grant_type"
+msgstr "Неподдерживаемый grant_type"
+
+msgid "Invalid refresh token"
+msgstr "Некорректный токен обновления"
+
+msgid "Invalid or missing refresh token"
+msgstr "Некорректный или отсутствует токен обновления"
+
+msgid "Client mismatch"
+msgstr "Несоответствие клиента"
+
+msgid "Redirect URI mismatch"
+msgstr "Несоответствие URI перенаправления"
+
+msgid "Code client mismatch"
+msgstr "Несоответствие кода клиента"
+
+msgid "Invalid or missing code/redirect_uri"
+msgstr "Некорректный или отсутствующий code/redirect_uri"
+
+msgid "Invalid client secret"
+msgstr "Некорректный секретный ключ клиента"
+
+msgid "Invalid client"
+msgstr "Некорректный клиент"
+
+msgid "Invalid or missing form parameters"
+msgstr "Некорректный или отсутствующий параметр формы"
+
+msgid "Invalid redirect URI"
+msgstr "Некорректный URI перенаправления"
+
+msgid "Only authorization_code flow is supported"
+msgstr "Поддерживается только поток авторизации с использованием кода авторизации."

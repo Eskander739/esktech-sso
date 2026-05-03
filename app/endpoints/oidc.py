@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
+from models.msg import Message
+from services.localization import _
 from templates_static import templates
 from utils.user_source import authenticate_user
 
@@ -36,14 +38,14 @@ async def login(request: Request):
     if not username or not password:
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Введите логин и пароль"},
+            {"request": request, "error": _(Message.input_login_and_password)},
         )
 
-    user = await authenticate_user(request, username, password)   # передаём request
+    user = await authenticate_user(request, username, password)
     if not user:
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Неверный логин или пароль"},
+            {"request": request, "error": _(Message.invalid_password_or_login)},
         )
 
     request.session["user"] = user
@@ -57,6 +59,45 @@ async def login(request: Request):
 
     next_url = request.session.pop("next_url", "/")
     return RedirectResponse(url=next_url)
+
+
+@router.post("/revoke")
+async def revoke_token(request: Request):
+    """OAuth 2.0 Token Revocation endpoint (RFC 7009)."""
+    form = await request.form()
+    token = form.get("token")
+    token_type_hint = form.get("token_type_hint", "access_token")
+
+    if not token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_not_found))
+
+    # Basic аутентификация клиента
+    auth = request.headers.get("Authorization")
+    if not auth or not auth.startswith("Basic "):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.missing_or_invalid_client_credentials))
+
+    import base64
+    credentials = base64.b64decode(auth[6:]).decode()
+    client_id, client_secret = credentials.split(":", 1)
+
+    # Проверяем клиента
+    client = await request.app.state.oauth_client_db.get_client(client_id)
+    if not client or client.get("client_secret") != client_secret:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.invalid_client_credentials))
+
+    oauth_token_db = request.app.state.oauth_token_db
+
+    if token_type_hint == "access_token":
+        await oauth_token_db.revoke_access_token(token)
+    elif token_type_hint == "refresh_token":
+        await oauth_token_db.revoke_token(token)
+    else:
+        # Пробуем оба варианта
+        await oauth_token_db.revoke_access_token(token)
+        await oauth_token_db.revoke_token(token)
+
+    return {"message": _(Message.token_revoked)}
+
 
 
 @router.post("/token")

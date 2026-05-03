@@ -2,9 +2,12 @@
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from models.msg import Message
+from services.localization import _
 
 
 @pytest.mark.asyncio
+
 async def test_ldap_login_success(client: AsyncClient, test_user, ldap_test_server):
     """Успешный вход через LDAP."""
     response = await client.post("/oidc/login", data={
@@ -23,14 +26,14 @@ async def test_ldap_login_invalid_credentials(client: AsyncClient, ldap_test_ser
         "password": "wrong_password"
     })
     assert response.status_code == status.HTTP_200_OK
-    assert "Неверный логин или пароль" in response.text
+    assert _(Message.invalid_password_or_login) in response.text
 
 
 @pytest.mark.asyncio
 async def test_ldap_login_missing_fields(client: AsyncClient):
     """Пустые поля логина."""
     response = await client.post("/oidc/login", data={})
-    assert "Введите логин и пароль" in response.text
+    assert _(Message.input_login_and_password) in response.text
 
 
 @pytest.mark.asyncio

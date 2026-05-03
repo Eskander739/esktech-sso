@@ -46,14 +46,14 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
         },
         follow_redirects=False,
     )
-    assert auth_resp.status_code in [302, 307]
+    assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
     # Логин
     login_resp = await client.post("/oidc/login", data={
         "username": "opaque_user",
         "password": "testpass123",
     }, follow_redirects=False)
-    assert login_resp.status_code in [302, 307]
+    assert login_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
     # Повторный запрос кода
     auth2_resp = await client.get(

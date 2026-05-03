@@ -1,11 +1,14 @@
 """Настройка OIDC-сервера на основе Authlib."""
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 
 import jwt
 from config import settings
-from constants import AccessTokenFormat
+from constants import AccessTokenFormat, GrantType
 from fastapi import HTTPException, Request, status
+from models.msg import Message
+from services.localization import _
 from starlette.datastructures import UploadFile
 from starlette.responses import RedirectResponse
 
@@ -31,14 +34,14 @@ class OIDCServer:
 
         client = await oauth_client_db.get_client(client_id)
         if not client or not client.get("is_active"):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid client")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_client))
 
         allowed_uris = client.get("redirect_uris", "").split()
         if redirect_uri not in allowed_uris:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid redirect_uri")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_redirect_uri))
 
         if response_type != "code":
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Only authorization_code flow is supported")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.only_authorization_code_flow_is_supported))
 
         user = request.session.get("user")
         if not user:
@@ -74,7 +77,7 @@ class OIDCServer:
         client_secret = form.get("client_secret")
 
         if not isinstance(grant_type, str) or not isinstance(client_id, str) or not isinstance(client_secret, str):
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing form parameters")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_ot_missing_form_parameters))
 
         oauth_client_db = request.app.state.oauth_client_db
         oauth_code_db = request.app.state.oauth_code_db
@@ -83,32 +86,32 @@ class OIDCServer:
 
         client = await oauth_client_db.get_client(client_id)
         if not client or not client.get("is_active"):
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid client")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.invalid_client))
 
         if client.get("client_secret") != client_secret:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid client secret")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.invalid_client_secret))
 
         # Определяем формат токена из настроек
         token_format = settings.ACCESS_TOKEN_FORMAT
 
-        if grant_type == "authorization_code":
+        if grant_type == GrantType.AUTHORIZATION_CODE:
             code = form.get("code")
             redirect_uri = form.get("redirect_uri")
             if not isinstance(code, str) or not isinstance(redirect_uri, str):
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing code/redirect_uri")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_or_missing_code_or_redirect_uri))
 
             code_data = await oauth_code_db.get_code(code)
             if not code_data:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid code")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_or_expired_code))
 
             if code_data["client_id"] != client_id:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code client mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.code_client_mismath))
             if code_data["redirect_uri"] != redirect_uri:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Redirect URI mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.redirect_uri_mismath))
 
             user = await user_db.get_by_id(code_data["user_id"])
             if not user:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "User not found")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.user_not_found))
 
             await oauth_code_db.delete_code(code)
 
@@ -151,21 +154,21 @@ class OIDCServer:
                 "expires_in": 3600,
             }
 
-        elif grant_type == "refresh_token":
-            refresh_token = form.get("refresh_token")
+        elif grant_type == GrantType.REFRESH_TOKEN:
+            refresh_token = form.get(GrantType.REFRESH_TOKEN)
             if not isinstance(refresh_token, str):
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid or missing refresh_token")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.refresh_token_invalid_or_missing))
 
             token_data = await oauth_token_db.get_token_by_refresh(refresh_token)
             if not token_data or token_data.get("is_revoked"):
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid refresh token")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.refresh_token_invalid))
 
             if token_data["client_id"] != client_id:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "Client mismatch")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.client_mismath))
 
             user = await user_db.get_by_id(token_data["user_id"])
             if not user:
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, "User not found")
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.user_not_found))
 
             # Отзываем старый токен
             await oauth_token_db.revoke_token(refresh_token)
@@ -206,7 +209,7 @@ class OIDCServer:
                 "expires_in": 3600,
             }
 
-        elif grant_type == "client_credentials":
+        elif grant_type == GrantType.CLIENT_CREDENTIALS:
             if token_format == AccessTokenFormat.OPAQUE:
                 access_token = await self._create_opaque_token(
                     user_id=0,
@@ -227,12 +230,12 @@ class OIDCServer:
             }
 
         else:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unsupported grant_type")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.unsupported_grant_type))
 
     async def userinfo(self, request: Request):
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing or invalid token")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.missing_or_invalid_client_credentials))
 
         token = auth_header.replace("Bearer ", "")
         user_db = request.app.state.user_db
@@ -244,21 +247,21 @@ class OIDCServer:
             try:
                 payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             except jwt.InvalidTokenError:
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid))
             user_id = payload.get("sub")
             if not user_id:
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid token payload")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid_payload))
             user = await user_db.get_by_id(int(user_id))
             if not user:
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.user_not_found))
         else:
             # OPAQUE token
             token_record = await oauth_token_db.get_token_by_access(token)
             if not token_record or token_record.get("is_revoked"):
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or revoked token")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid))
             user = await user_db.get_by_id(token_record["user_id"])
             if not user:
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
+                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.user_not_found))
 
         return {
             "sub": str(user["id"]),
@@ -285,6 +288,7 @@ class OIDCServer:
 
     def _create_jwt_access_token(self, user: dict, client_id: str, scope: str) -> str:
         payload = {
+            "jti": str(uuid.uuid4()),  # уникальный идентификатор токена
             "sub": str(user["id"]),
             "client_id": client_id,
             "scope": scope,

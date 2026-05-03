@@ -4,6 +4,7 @@
 .db
 .env
 **/__pycache__/
+test.txt
 allure*
 test-file.txt
 pytest.log

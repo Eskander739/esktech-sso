@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # Общие
     SECRET_KEY: str = Field(default_factory=get_or_create_secret_key)
+    LOCALE_DEFAULT: str = Field("en")
     ACCESS_TOKEN_FORMAT: str = Field(AccessTokenFormat.JWT, validation_alias="ACCESS_TOKEN_FORMAT")
     DEBUG: bool = Field(False, validation_alias="DEBUG")
 

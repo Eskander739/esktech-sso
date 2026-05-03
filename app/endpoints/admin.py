@@ -2,9 +2,11 @@
 import secrets
 
 from config import settings
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
+from models.msg import Message
 from pydantic import BaseModel
+from services.localization import _
 from templates_static import templates
 from utils.license import is_enterprise
 from utils.limits import check_clients_limit
@@ -27,7 +29,7 @@ async def admin_clients(request: Request):
 async def create_client(request: Request, data: ClientCreate):
     """Создание нового OAuth2/OIDC клиента."""
     if not is_enterprise(settings.LICENSE_KEY) and not await check_clients_limit(request):
-        raise HTTPException(status_code=403, detail="Community лимит: не более 2 клиентов")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=_(Message.community_limit))
 
     client_id = secrets.token_urlsafe(16)
     client_secret = secrets.token_urlsafe(32)

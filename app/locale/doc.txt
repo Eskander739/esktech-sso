@@ -1,0 +1,1 @@
+pybabel compile -d locale -f - команда для генерации новых переводов

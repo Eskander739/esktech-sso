@@ -1,4 +1,5 @@
 """E2E тесты для OIDC потока."""
+import random
 from typing import Any
 
 import pytest
@@ -48,7 +49,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
         },
         follow_redirects=False,
     )
-    assert auth_resp.status_code in [302, 307]
+    assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
     assert "/oidc/login" in auth_resp.headers["location"]
 
     login_resp = await client.post("/oidc/login", data={
@@ -112,9 +113,11 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
 
     user_db = app.state.user_db
     hashed = hash_password("testpass123")
+    username = f"testuser2-{random.randint(100000, 999999)}"
+    email = f"test2-{random.randint(100000, 999999)}@example.com"
     await user_db.create(
-        username="testuser2",
-        email="test2@example.com",
+        username=username,
+        email=email,
         hashed_password=hashed,
         full_name="Test User 2",
         is_active=True,
@@ -139,10 +142,10 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
         },
         follow_redirects=False,
     )
-    assert auth_resp.status_code in [302, 307]
+    assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
     login_resp = await client.post("/oidc/login", data={
-        "username": "testuser2",
+        "username": username,
         "password": "testpass123",
     }, follow_redirects=False)
     assert login_resp.status_code == status.HTTP_307_TEMPORARY_REDIRECT
@@ -199,7 +202,7 @@ async def test_gitlab_oidc_discovery(gitlab_oidc_server):
     """Проверяет, что GitLab отдаёт корректный OpenID Connect Discovery документ."""
     async with AsyncClient() as client:
         resp = await client.get(gitlab_oidc_server.well_known_url)
-    assert resp.status_code == 200
+    assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
     assert data["issuer"] == gitlab_oidc_server.issuer
     assert "authorization_endpoint" in data
@@ -223,6 +226,6 @@ async def test_gitlab_oidc_authorization_redirect(gitlab_oidc_server):
             },
             follow_redirects=False,
         )
-    # GitLab должен вернуть 302 и перенаправить на страницу входа
-    assert resp.status_code == 302
+
+    assert resp.status_code == status.HTTP_302_FOUND
     assert "/users/sign_in" in resp.headers.get("location", "")

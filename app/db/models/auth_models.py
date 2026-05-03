@@ -43,8 +43,8 @@ class OAuthToken(Base):
     client_id = Column(String(255), nullable=False)
     user_id = Column(Integer, nullable=True)
     token_type = Column(String(50), default=AccessTokenFormat.JWT)  # "jwt" или "opaque"
-    access_token = Column(String(255), unique=True, nullable=False)
-    refresh_token = Column(String(255), unique=True, nullable=True)
+    access_token = Column(String(1024), unique=True, nullable=False)
+    refresh_token = Column(String(1024), unique=True, nullable=True)
     scope = Column(String(255), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     is_revoked = Column(Boolean, default=False)

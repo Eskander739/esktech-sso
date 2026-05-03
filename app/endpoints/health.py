@@ -1,5 +1,7 @@
 """Healthchecks для мониторинга."""
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, status
+from models.msg import Message
+from services.localization import _
 from sqlalchemy.exc import SQLAlchemyError
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -16,5 +18,5 @@ async def readiness(request: Request):
         async with request.app.state.db_pool.get_connection() as session:
             await session.execute("SELECT 1")
         return {"status": "ready"}
-    except SQLAlchemyError as e:
-        return {"status": "not ready", "error": str(e)}, 503
+    except SQLAlchemyError as err:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{_(Message.internal_error)}: {err!s}")
