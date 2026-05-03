@@ -4,6 +4,10 @@
 ![Python](https://img.shields.io/badge/python-3.10%2B-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
+![OIDC](https://img.shields.io/badge/OIDC-1.0-blue.svg)
+![SAML](https://img.shields.io/badge/SAML-2.0-orange.svg)
+![LDAP](https://img.shields.io/badge/LDAP-ready-green.svg)
+![SSO](https://img.shields.io/badge/SSO-Enterprise-purple.svg)
 
 **EskTech SSO** — российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
 
