@@ -9,43 +9,7 @@ class DefaultMessage(BaseModel):
 
 
 class Message:
-    user_blocking_status_changed = "User blocking status successfully changed"
-    user_blocked = "User blocked"
-    user_not_blocked = "User not blocked"
-    user_is_not_registered = "User is not registered"
     user_is_not_updated = "User was not updated"
-    wrong_password = "Wrong password"
-    permission_denied = "Access denied"
-    can_not_block_admin = "Cannot block administrator"
-    can_not_verify_admin = "Cannot verify administrator"
-    can_not_unverify_admin = "Cannot unverify administrator"
-    user_is_not_blocked = "User is not blocked"
-    user_is_not_verified = "User is not verified"
-    user_is_verified = "User is verified"
-    user_is_blocked = "User is blocked"
-    only_admin_have_access = "Access is allowed only for administrator"
-    wrong_email = "Invalid email"
-    link_invalid = "Link is not valid, please repeat registration process"
-    email_already_confirmed = "Email is already confirmed"
-    user_image_is_not_deleted = "User image not deleted"
-    user_image_is_not_updated = "User image not updated"
-
-    # Token messages
-    token_not_found = "Token not found"
-    token_expired = "Token has expired"
-
-    # System messages
-    incorrect_json_format = "Invalid JSON format"
-    unknown_error = "Unknown error"
-    evil_attempt_to_change_email = "Unauthorized attempt to change email"
-    code_has_been_sent = "An email with a code has been sent to your email address. You can resubmit your request in 1 minute"
-    confirm_email_has_been_sent = "A confirmation email has been sent to your email address. You can resubmit your request in 5 minutes"
-    authorization_successful = "Authorization successful"
-    exit_was_successful = "The exit was successful"
-    email_successfully_confirmed = "Email successfully confirmed!"
-
-
-    # SSO msg
     community_limit = "Community limit: no more than 2 clients"
     token_revoked = "Token revoked"
     invalid_client_credentials = "Invalid client credentials"
