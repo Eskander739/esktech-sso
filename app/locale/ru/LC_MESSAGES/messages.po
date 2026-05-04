@@ -1,9 +1,6 @@
 msgid "User was not updated"
 msgstr "Пользователь не был обновлен"
 
-msgid "Community limit: no more than 2 clients"
-msgstr "Community лимит: не более 2 клиентов"
-
 msgid "Token revoked"
 msgstr "Токен отозван"
 

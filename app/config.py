@@ -37,8 +37,6 @@ class Settings(BaseSettings):
     LDAP_BIND_PASSWORD: str = Field("", validation_alias="LDAP_BIND_PASSWORD")
     LDAP_USER_ATTR: str = Field("uid", validation_alias="LDAP_USER_ATTR")
 
-    # Лицензия
-    LICENSE_KEY: str = Field("", validation_alias="LICENSE_KEY")
 
     # Лимиты
     COMMUNITY_MAX_CLIENTS: int = Field(2, validation_alias="COMMUNITY_MAX_CLIENTS")

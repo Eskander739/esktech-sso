@@ -152,14 +152,19 @@ esktech-sso
 │  │   ├── oauth.py # Класс для взаимодействия с авторизацией
 │  │   └── users.py # Класс для взаимодействия с пользователями
 │  ├── endpoints # API эндпоинты
-│  │   ├── oidc.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
-│  │   ├── admin.py # Админка OIDC-клиентов (создание, удаление)
-│  │   ├── users.py # CRUD пользователей (список, создание, редактирование, удаление)
-│  │   └── health.py # Healthchecks (/health/live, /health/ready)
-│  ├── schemas # Pydantic модели (UserCreate, UserUpdate)
+│  │   └── v0 # Версия API v0
+│  │       ├── oidc.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
+│  │       ├── admin.py # Админка OIDC-клиентов (создание, удаление)
+│  │       ├── users.py # CRUD пользователей (список, создание, редактирование, удаление)
+│  │       └── health.py # Healthchecks (/health/live, /health/ready)
+│  ├── locale # Интернационализация(eng, rus)
+│  ├── models # Pydantic модели
+│  │   ├── general.py # Общие модели
+│  │   ├── msg.py # Общие сообщения
 │  │   └── users.py # Модели пользователей для запросов
 │  ├── services # Бизнес-логика
-│  │   └── db_pool.py # Пул соединений с базой данных
+│  │   ├── db_pool.py # Пул соединений с базой данных
+│  │   └── localization.py # Класс для работы с интернационализацией
 │  ├── templates_static # HTML шаблоны (Jinja2)
 │  │   ├── admin_clients.html # Админка OIDC-клиентов
 │  │   ├── admin_users.html # Список пользователей (админка)
@@ -174,10 +179,8 @@ esktech-sso
 │  ├── utils # Утилиты
 │  │   ├── cli.py # CLI для взаимодействия с командной строкой
 │  │   ├── ldap_client.py # Подключение к LDAP/Active Directory
-│  │   ├── license.py # Проверка лицензии (Community)
-│  │   ├── limits.py # Проверка лимитов Community (не более 2 клиентов / 1 источника)
 │  │   ├── password_validator.py # Хеширование и проверка паролей (bcrypt)
-│  │   └── user_source.py # Абстракция: аутентификация через БД или LDAP
+│  │   └── secrets.py # Инструменты для работы с секретными ключами
 │  ├── auth_server.py # OIDC-сервер на Authlib (гранты, токены, клиенты)
 │  ├── config.py # Конфигурация (Pydantic Settings, переменные окружения)
 │  ├── constants.py # Константные переменные
@@ -185,12 +188,15 @@ esktech-sso
 │  └── main.py # FastAPI приложение, lifespan, роутеры
 ├── .env.example # Пример переменных окружения
 ├── .gitignore # Файл для игнорирования мусора при работа с Git
+├── CODE_OF_CONDUCT.md # Кодекс поведения участника
+├── CONTRIBUTING.md # Как внести вклад в EskTech SSO
 ├── docker-compose.yml # PostgreSQL, Redis, приложение
 ├── Dockerfile # Сборка образа (Python 3.12-slim + зависимости)
 ├── LICENSE # AGPLv3
 ├── Makefile # Утилиты: run, test, format, deps
 ├── pyproject.toml # Poetry конфигурация (для разработки)
-└── requirements.txt # Python зависимости (pip)
+├── requirements.txt # Python зависимости (pip)
+└── SECURITY.md # Политика безопасности
 ```
 #### Стек: FastAPI + PostgreSQL + Redis + Docker
 

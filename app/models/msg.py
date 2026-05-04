@@ -11,7 +11,6 @@ class DefaultMessage(BaseModel):
 class Message:
     token_not_found = "Token not found"
     user_is_not_updated = "User was not updated"
-    community_limit = "Community limit: no more than 2 clients"
     token_revoked = "Token revoked"
     invalid_client_credentials = "Invalid client credentials"
     missing_or_invalid_client_credentials = "Missing or invalid client credentials"
