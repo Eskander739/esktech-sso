@@ -6,9 +6,8 @@ from auth_server import create_authorization_server
 from config import settings
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
-from endpoints import admin, health, oidc, users
+from endpoints.v0 import admin, health, oidc, users
 from fastapi import FastAPI
-
 from log import logger
 from services.db_pool import DBPool
 from starlette.middleware.sessions import SessionMiddleware

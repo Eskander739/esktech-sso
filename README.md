@@ -1,14 +1,16 @@
 [![Stars](https://img.shields.io/github/stars/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
 [![Forks](https://img.shields.io/github/forks/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-# EskTech SSO — лёгкий корпоративный SSO на Python
+# EskTech SSO — бесплатный лёгкий корпоративный SSO на Python
 ![Python](https://img.shields.io/badge/python-3.10%2B-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
 ![OIDC](https://img.shields.io/badge/OIDC-1.0-blue.svg)
 ![SAML](https://img.shields.io/badge/SAML-2.0-orange.svg)
 ![LDAP](https://img.shields.io/badge/LDAP-ready-green.svg)
-![SSO](https://img.shields.io/badge/SSO-Enterprise-purple.svg)
+![Opaque Tokens](https://img.shields.io/badge/Opaque-Tokens%20%26%20Revocation-6A0DAD)
+![SSO](https://img.shields.io/badge/SSO-Free-green.svg)
+![SSO](https://img.shields.io/badge/SSO-Russian-blue.svg)
 
 **EskTech SSO** — российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
 
@@ -21,23 +23,21 @@
 ---
 
 ## ✨ Возможности
-| Возможность |        Community         | Enterprise Light | Enterprise Max |
-|-------------|:------------------------:|:----------------:|:--------------:|
-| Единый вход для всех сервисов |            ✅             | ✅ | ✅ |
-| OIDC / OAuth2 провайдер |            ✅             | ✅ | ✅ |
-| LDAP-адаптер (AD / OpenLDAP) |            ✅             | ✅ | ✅ |
-| JWT-верификация |            ✅             | ✅ | ✅ |
-| Opaque-токены (Удалённый отзыв токенов) |            ✅             | ✅ | ✅ |
-| SAML 2.0 |            ❌             | ❌ | ✅ |
-| Адаптер для 1С |            ❌             | ❌ | ✅ |
-| Адаптер для Битрикс24 |            ❌             | ❌ | ✅ |
-| Количество сервисов |           до 2           | до 10 | безлимит |
-| Количество источников истины |            1             | до 3 | безлимит |
-| Техподдержка |            ❌             | 8/5 (рабочие часы) | 24/7 |
-| SLA |            ❌             | 99.5% | 99.9% |
-| Обновления и патчи | сообщество/автор проекта | приоритетные | критические в течение 24ч |
-| **Цена** |         **0 ₽**          | **240 000 ₽/год** | **590 000 ₽/год** |
----
+| Возможность | EskTech SSO (Полностью бесплатно) |
+|-------------|:---------------------------------:|
+| Единый вход для всех сервисов | ✅ |
+| OIDC / OAuth2 провайдер | ✅ |
+| LDAP-адаптер (AD / OpenLDAP) | ✅ |
+| JWT-верификация | ✅ |
+| Opaque-токены (удалённый отзыв токенов) | ✅ |
+| SAML 2.0 | ✅ (планируется) |
+| Адаптер для 1С | ✅ (планируется) |
+| Адаптер для Битрикс24 | ✅ (планируется) |
+| Количество сервисов | безлимит |
+| Количество источников истины | безлимит |
+| Техподдержка | сообщество / автор проекта |
+| Обновления и патчи | открытый репозиторий |
+| **Цена** | **0 ₽** |
 
 ## 🚀 Быстрый старт (Community Edition)
 
@@ -174,7 +174,7 @@ esktech-sso
 │  ├── utils # Утилиты
 │  │   ├── cli.py # CLI для взаимодействия с командной строкой
 │  │   ├── ldap_client.py # Подключение к LDAP/Active Directory
-│  │   ├── license.py # Проверка лицензии (Community / Enterprise)
+│  │   ├── license.py # Проверка лицензии (Community)
 │  │   ├── limits.py # Проверка лимитов Community (не более 2 клиентов / 1 источника)
 │  │   ├── password_validator.py # Хеширование и проверка паролей (bcrypt)
 │  │   └── user_source.py # Абстракция: аутентификация через БД или LDAP
@@ -195,12 +195,12 @@ esktech-sso
 #### Стек: FastAPI + PostgreSQL + Redis + Docker
 
 ### 🤝 Лицензия
-· **Community Edition** — GNU AGPL v3
 
-· **Enterprise Edition** — коммерческая лицензия (включает адаптеры для 1С, Битрикс24, поддержку и SLA)
+**EskTech SSO** распространяется под лицензией **GNU AGPL v3**.
 
-**Enterprise-клиенты получают ключ для снятия лимитов, доступ к приватному репозиторию с адаптерами, приоритетную техподдержку 24/7 и SLA 99.9%**
+Код полностью открыт, вы можете использовать продукт бесплатно для любых целей.
 
+Коммерческая поддержка и дополнительные сервисы (мониторинг безопасности, PAM, RBAC) предоставляются отдельно — по запросу.
 ### 📞 Контакты
 
 Email: eskander5765@yandex.ru

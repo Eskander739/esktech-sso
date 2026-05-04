@@ -1,10 +1,11 @@
 """Healthchecks для мониторинга."""
+from constants import ApiVersion
 from fastapi import APIRouter, HTTPException, Request, status
 from models.msg import Message
 from services.localization import _
 from sqlalchemy.exc import SQLAlchemyError
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(prefix=f"{ApiVersion.V0}/health", tags=["health"])
 
 
 @router.get("/live")

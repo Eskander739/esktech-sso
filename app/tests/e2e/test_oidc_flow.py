@@ -3,6 +3,7 @@ import random
 from typing import Any
 
 import pytest
+from constants import ApiVersion
 from fastapi import status
 from httpx import AsyncClient
 from tests.config_tests_sample import ConfigTestsSample
@@ -30,7 +31,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
         is_active=True,
     )
 
-    create_resp = await client.post("/admin/clients", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/clients", json={
         "name": "Test App",
         "redirect_uris": "http://localhost:8000/callback",
     })
@@ -40,7 +41,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     client_secret = client_data["client_secret"]
 
     auth_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -52,14 +53,14 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
     assert "/oidc/login" in auth_resp.headers["location"]
 
-    login_resp = await client.post("/oidc/login", data={
+    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
         "username": "testuser",
         "password": "testpass123",
     }, follow_redirects=False)
     assert login_resp.status_code == status.HTTP_307_TEMPORARY_REDIRECT
 
     auth2_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -73,7 +74,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     assert "code=" in location
 
     code = location.split("code=")[1].split("&")[0]
-    token_resp = await client.post("/oidc/token", data={
+    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -90,14 +91,14 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_oidc_client_credentials_flow(client: AsyncClient):
     """OAuth2 Client Credentials Grant (внутренний OIDC-сервер)."""
-    create_resp = await client.post("/admin/clients", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/clients", json={
         "name": "Service App",
         "redirect_uris": "http://localhost:8000/callback",
     })
     assert create_resp.status_code == status.HTTP_200_OK
     client_data = create_resp.json()
 
-    token_resp = await client.post("/oidc/token", data={
+    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
         "grant_type": "client_credentials",
         "client_id": client_data["client_id"],
         "client_secret": client_data["client_secret"],
@@ -123,7 +124,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
         is_active=True,
     )
 
-    create_resp = await client.post("/admin/clients", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/clients", json={
         "name": "Refresh Test App",
         "redirect_uris": "http://localhost:8000/callback",
     })
@@ -133,7 +134,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     client_secret = client_data["client_secret"]
 
     auth_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -144,14 +145,14 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     )
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
-    login_resp = await client.post("/oidc/login", data={
+    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
         "username": username,
         "password": "testpass123",
     }, follow_redirects=False)
     assert login_resp.status_code == status.HTTP_307_TEMPORARY_REDIRECT
 
     auth2_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -163,7 +164,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     location = auth2_resp.headers["location"]
     code = location.split("code=")[1].split("&")[0]
 
-    token_resp = await client.post("/oidc/token", data={
+    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -174,7 +175,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     token_data = token_resp.json()
     refresh_token = token_data["refresh_token"]
 
-    resp = await client.post("/oidc/token", data={
+    resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
         "client_id": client_id,
@@ -188,7 +189,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
 async def test_oidc_userinfo_endpoint(client: AsyncClient, auth_token):
     """Получение userinfo по access_token (внутренний OIDC-сервер)."""
     resp = await client.get(
-        "/oidc/userinfo",
+        f"{ApiVersion.V0}/oidc/userinfo",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert resp.status_code == status.HTTP_200_OK

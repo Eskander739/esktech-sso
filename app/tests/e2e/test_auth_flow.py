@@ -1,5 +1,6 @@
 """E2E тесты для auth flow."""
 import pytest
+from constants import ApiVersion
 from fastapi import status
 from httpx import AsyncClient
 
@@ -8,7 +9,7 @@ from httpx import AsyncClient
 async def test_authorize_redirect(client: AsyncClient, test_client_app):
     """Тест редиректа на страницу логина."""
     response = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": test_client_app["client_id"],
             "redirect_uri": "http://localhost:8000/callback",

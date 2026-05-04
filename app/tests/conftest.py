@@ -12,6 +12,7 @@ from db.users import UserDB
 from httpx import ASGITransport, AsyncClient
 from ldap3 import ALL, Connection, Server
 from ldap3.core.exceptions import LDAPException
+from log import logger
 from main import app
 from services.db_pool import DBPool
 from sqlalchemy import text
@@ -357,6 +358,7 @@ async def setup_test_db():
     app.state.oauth_token_db = OAuthTokenDB(db_pool)
     app.state.user_db = UserDB(db_pool)
     app.state.oidc_server = await create_authorization_server()
+    app.state.logger = logger
 
     yield
 

@@ -1,4 +1,5 @@
 """Управление пользователями (CRUD) для администратора."""
+from constants import ApiVersion
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from models.msg import Message
@@ -7,7 +8,7 @@ from services.localization import _
 from templates_static import templates
 from utils.password_validator import hash_password
 
-router = APIRouter(prefix="/admin/users", tags=["admin"])
+router = APIRouter(prefix=f"{ApiVersion.V0}/admin/users", tags=["admin"])
 
 
 @router.get("/", response_class=HTMLResponse)

@@ -1,7 +1,7 @@
 """E2E тесты для OPAQUE токенов (реальный HTTP)."""
 import pytest
 from config import settings
-from constants import AccessTokenFormat
+from constants import AccessTokenFormat, ApiVersion
 from fastapi import status
 from httpx import AsyncClient
 from utils.password_validator import hash_password
@@ -26,7 +26,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
     )
 
     # Создаём OIDC клиента
-    create_resp = await client.post("/admin/clients", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/clients", json={
         "name": "Opaque Test App",
         "redirect_uris": "http://localhost:8000/callback",
     })
@@ -37,7 +37,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Авторизация
     auth_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -49,7 +49,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
     # Логин
-    login_resp = await client.post("/oidc/login", data={
+    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
         "username": "opaque_user",
         "password": "testpass123",
     }, follow_redirects=False)
@@ -57,7 +57,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Повторный запрос кода
     auth2_resp = await client.get(
-        "/oidc/authorize",
+        f"{ApiVersion.V0}/oidc/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -70,7 +70,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
     code = location.split("code=")[1].split("&")[0]
 
     # Обмен на токены
-    token_resp = await client.post("/oidc/token", data={
+    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -86,7 +86,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Проверяем userinfo с opaque токеном
     userinfo_resp = await client.get(
-        "/oidc/userinfo",
+        f"{ApiVersion.V0}/oidc/userinfo",
         headers={"Authorization": f"Bearer {access_token}"}
     )
     assert userinfo_resp.status_code == status.HTTP_200_OK

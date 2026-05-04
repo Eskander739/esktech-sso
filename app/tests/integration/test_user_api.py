@@ -1,5 +1,6 @@
 """Интеграционные тесты API пользователей."""
 import pytest
+from constants import ApiVersion
 from fastapi import status
 from httpx import AsyncClient
 from models.msg import Message
@@ -9,7 +10,7 @@ from services.localization import _
 @pytest.mark.asyncio
 async def test_list_users_api(client: AsyncClient, setup_test_db):
     """Тест API списка пользователей."""
-    response = await client.get("/admin/users/list")
+    response = await client.get(f"{ApiVersion.V0}/admin/users/list")
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(response.json(), list)
 
@@ -24,7 +25,7 @@ async def test_create_user_api(client: AsyncClient, setup_test_db):
         "full_name": "API User",
         "is_active": True
     }
-    response = await client.post("/admin/users/", json=user_data)
+    response = await client.post(f"{ApiVersion.V0}/admin/users/", json=user_data)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == "apiuser"
@@ -42,10 +43,10 @@ async def test_create_user_duplicate_error(client: AsyncClient, setup_test_db):
         "full_name": "First",
         "is_active": True
     }
-    await client.post("/admin/users/", json=user_data)
+    await client.post(f"{ApiVersion.V0}/admin/users/", json=user_data)
 
     # Пытаемся создать с тем же username
-    response = await client.post("/admin/users/", json=user_data)
+    response = await client.post(f"{ApiVersion.V0}/admin/users/", json=user_data)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert _(Message.user_is_already_registered) in response.text
 
@@ -54,7 +55,7 @@ async def test_create_user_duplicate_error(client: AsyncClient, setup_test_db):
 async def test_get_user_api(client: AsyncClient, setup_test_db):
     """Тест API получения пользователя по ID."""
     # Сначала создаём
-    create_resp = await client.post("/admin/users/", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/users/", json={
         "username": "getuser",
         "email": "get@test.com",
         "password": "pass",
@@ -63,7 +64,7 @@ async def test_get_user_api(client: AsyncClient, setup_test_db):
     user_id = create_resp.json()["id"]
 
     # Получаем
-    response = await client.get(f"/admin/users/{user_id}")
+    response = await client.get(f"{ApiVersion.V0}/admin/users/{user_id}")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["username"] == "getuser"
@@ -73,7 +74,7 @@ async def test_get_user_api(client: AsyncClient, setup_test_db):
 @pytest.mark.asyncio
 async def test_update_user_api(client: AsyncClient, setup_test_db):
     """Тест API обновления пользователя."""
-    create_resp = await client.post("/admin/users/", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/users/", json={
         "username": "updateuser",
         "email": "update@test.com",
         "password": "pass",
@@ -81,7 +82,7 @@ async def test_update_user_api(client: AsyncClient, setup_test_db):
     })
     user_id = create_resp.json()["id"]
 
-    response = await client.put(f"/admin/users/{user_id}", json={
+    response = await client.put(f"{ApiVersion.V0}/admin/users/{user_id}", json={
         "email": "new@test.com",
         "full_name": "New Name",
         "is_active": False
@@ -89,7 +90,7 @@ async def test_update_user_api(client: AsyncClient, setup_test_db):
     assert response.status_code == status.HTTP_200_OK
 
     # Проверяем изменения
-    get_resp = await client.get(f"/admin/users/{user_id}")
+    get_resp = await client.get(f"{ApiVersion.V0}/admin/users/{user_id}")
     assert get_resp.json()["email"] == "new@test.com"
     assert get_resp.json()["full_name"] == "New Name"
 
@@ -97,7 +98,7 @@ async def test_update_user_api(client: AsyncClient, setup_test_db):
 @pytest.mark.asyncio
 async def test_delete_user_api(client: AsyncClient, setup_test_db):
     """Тест API удаления пользователя."""
-    create_resp = await client.post("/admin/users/", json={
+    create_resp = await client.post(f"{ApiVersion.V0}/admin/users/", json={
         "username": "deleteuser",
         "email": "delete@test.com",
         "password": "pass",
@@ -105,9 +106,8 @@ async def test_delete_user_api(client: AsyncClient, setup_test_db):
     })
     user_id = create_resp.json()["id"]
 
-    response = await client.delete(f"/admin/users/{user_id}")
+    response = await client.delete(f"{ApiVersion.V0}/admin/users/{user_id}")
     assert response.status_code == status.HTTP_200_OK
 
-    # Проверяем что пользователь удалён
-    get_resp = await client.get(f"/admin/users/{user_id}")
+    get_resp = await client.get(f"{ApiVersion.V0}/admin/users/{user_id}")
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
