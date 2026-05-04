@@ -3,7 +3,6 @@ import secrets
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-
 from models.general import ClientCreate
 from templates_static import templates
 
