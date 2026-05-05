@@ -10,7 +10,7 @@ from httpx import AsyncClient
 async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token):
     """Доступ к защищённому эндпоинту с валидным токеном."""
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert resp.status_code == status.HTTP_200_OK
@@ -20,7 +20,7 @@ async def test_jwt_validation_required_endpoint(client: AsyncClient, auth_token)
 @pytest.mark.skip
 async def test_jwt_missing_token(client: AsyncClient):
     """Запрос без токена."""
-    resp = await client.get(f"{ApiVersion.V0}/oidc/userinfo")
+    resp = await client.get("/userinfo")
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
     assert "Bearer" in resp.headers.get("WWW-Authenticate", "")
 
@@ -29,7 +29,7 @@ async def test_jwt_missing_token(client: AsyncClient):
 async def test_jwt_invalid_token(client: AsyncClient):
     """Неверный токен."""
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": "Bearer invalid.token.here"}
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
@@ -40,7 +40,7 @@ async def test_jwt_invalid_token(client: AsyncClient):
 async def test_jwt_expired_token(client: AsyncClient, expired_token):
     """Просроченный токен."""
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {expired_token}"}
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
@@ -56,7 +56,7 @@ async def test_jwt_wrong_audience(client: AsyncClient):
         algorithm="HS256"
     )
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {wrong_aud_token}"}
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
@@ -67,7 +67,7 @@ async def test_jwt_missing_sub_claim(client: AsyncClient):
     """Токен без sub."""
     token = jwt.encode({"aud": "sso"}, "secret_key", algorithm="HS256")
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert resp.status_code == status.HTTP_401_UNAUTHORIZED
@@ -77,7 +77,7 @@ async def test_jwt_missing_sub_claim(client: AsyncClient):
 @pytest.mark.skip
 async def test_jwk_endpoint_returns_keys(client: AsyncClient):
     """Эндпоинт JWKS отдаёт публичные ключи."""
-    resp = await client.get(f"{ApiVersion.V0}/oidc/jwks")
+    resp = await client.get("/jwks")
     assert resp.status_code == status.HTTP_200_OK
     data = resp.json()
     assert "keys" in data

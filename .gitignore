@@ -3,6 +3,7 @@
 .pyc
 .db
 .env
+san.cnf
 **/__pycache__/
 test.txt
 allure*

@@ -41,7 +41,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     client_secret = client_data["client_secret"]
 
     auth_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -51,16 +51,16 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
         follow_redirects=False,
     )
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
-    assert "/oidc/login" in auth_resp.headers["location"]
+    assert "/login" in auth_resp.headers["location"]
 
-    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
+    login_resp = await client.post("/login", data={
         "username": "testuser",
         "password": "testpass123",
     }, follow_redirects=False)
     assert login_resp.status_code == status.HTTP_307_TEMPORARY_REDIRECT
 
     auth2_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -74,7 +74,7 @@ async def test_oidc_authorization_code_flow(client: AsyncClient):
     assert "code=" in location
 
     code = location.split("code=")[1].split("&")[0]
-    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    token_resp = await client.post("/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -98,7 +98,7 @@ async def test_oidc_client_credentials_flow(client: AsyncClient):
     assert create_resp.status_code == status.HTTP_200_OK
     client_data = create_resp.json()
 
-    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    token_resp = await client.post("/token", data={
         "grant_type": "client_credentials",
         "client_id": client_data["client_id"],
         "client_secret": client_data["client_secret"],
@@ -134,7 +134,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     client_secret = client_data["client_secret"]
 
     auth_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+    "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -145,14 +145,14 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     )
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
-    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
+    login_resp = await client.post("/login", data={
         "username": username,
         "password": "testpass123",
     }, follow_redirects=False)
     assert login_resp.status_code == status.HTTP_307_TEMPORARY_REDIRECT
 
     auth2_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -164,7 +164,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     location = auth2_resp.headers["location"]
     code = location.split("code=")[1].split("&")[0]
 
-    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    token_resp = await client.post("/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -175,7 +175,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
     token_data = token_resp.json()
     refresh_token = token_data["refresh_token"]
 
-    resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    resp = await client.post("token", data={
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
         "client_id": client_id,
@@ -189,7 +189,7 @@ async def test_oidc_refresh_token_flow(client: AsyncClient):
 async def test_oidc_userinfo_endpoint(client: AsyncClient, auth_token):
     """Получение userinfo по access_token (внутренний OIDC-сервер)."""
     resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert resp.status_code == status.HTTP_200_OK
@@ -215,7 +215,7 @@ async def test_gitlab_oidc_discovery(gitlab_oidc_server):
 @pytest.mark.asyncio
 async def test_gitlab_oidc_authorization_redirect(gitlab_oidc_server):
     """Проверяет, что GitLab перенаправляет на страницу логина при запросе авторизации."""
-    authorization_url = f"http://{ConfigTestsSample.GITLAB_HOST}:{ConfigTestsSample.GITLAB_HTTP_PORT}/oauth/authorize"
+    authorization_url = f"http://{ConfigTestsSample.GITLAB_HOST}:{ConfigTestsSample.GITLAB_HTTP_PORT}/authorize"
     async with AsyncClient() as client:
         resp = await client.get(
             authorization_url,

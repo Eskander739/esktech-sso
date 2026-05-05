@@ -12,7 +12,9 @@
 ![SSO](https://img.shields.io/badge/SSO-Free-green.svg)
 ![SSO](https://img.shields.io/badge/SSO-Russian-blue.svg)
 
-**EskTech SSO** — российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
+### **EskTech SSO** - Keycloak alternative
+
+**EskTech SSO** - российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
 
 🔐 **Код открыт. Никаких сюрпризов.**
 ### ✨ **Активная стадия разработки, определенные функциональности могут не работать**

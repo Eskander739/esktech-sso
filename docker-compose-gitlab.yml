@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD: sso_pass
+      POSTGRES_DB: sso
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sso-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U sso_user -d sso" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - sso-net
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sso_user:sso_pass@db:5432/sso
+      REDIS_URL: redis://redis:6379/0
+    networks:
+      - sso-net
+    volumes:
+      - ./server.crt:/app/server.crt:Z
+      - ./server.key:/app/server.key:Z
+
+  gitlab:
+    image: gitlab/gitlab-ce:17.8.5-ce.0
+    hostname: localhost
+    ports:
+      - "8929:80"
+    environment:
+      GITLAB_ROOT_EMAIL: "sso_admin@esktech.ru"
+      GITLAB_ROOT_PASSWORD: "EskTech2026Secure!"
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['password_validation'] = false
+    networks:
+      - sso-net
+
+volumes:
+  postgres_data:
+
+networks:
+  sso-net:
+    driver: bridge

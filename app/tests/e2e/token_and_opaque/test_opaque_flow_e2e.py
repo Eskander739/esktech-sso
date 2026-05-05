@@ -37,7 +37,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Авторизация
     auth_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -49,7 +49,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
     assert auth_resp.status_code in [status.HTTP_302_FOUND, status.HTTP_307_TEMPORARY_REDIRECT]
 
     # Логин
-    login_resp = await client.post(f"{ApiVersion.V0}/oidc/login", data={
+    login_resp = await client.post("/login", data={
         "username": "opaque_user",
         "password": "testpass123",
     }, follow_redirects=False)
@@ -57,7 +57,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Повторный запрос кода
     auth2_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": client_id,
             "response_type": "code",
@@ -70,7 +70,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
     code = location.split("code=")[1].split("&")[0]
 
     # Обмен на токены
-    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    token_resp = await client.post("/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -86,7 +86,7 @@ async def test_authorization_code_flow_opaque(client: AsyncClient, setup_test_db
 
     # Проверяем userinfo с opaque токеном
     userinfo_resp = await client.get(
-        f"{ApiVersion.V0}/oidc/userinfo",
+        "/userinfo",
         headers={"Authorization": f"Bearer {access_token}"}
     )
     assert userinfo_resp.status_code == status.HTTP_200_OK
@@ -123,17 +123,17 @@ async def test_refresh_token_opaque(client: AsyncClient, setup_test_db):
     client_secret = client_data["client_secret"]
 
     # Получаем код (сначала логин)
-    await client.get("/oidc/authorize", params={
+    await client.get("/authorize", params={
         "client_id": client_id,
         "response_type": "code",
         "redirect_uri": "http://localhost:8000/callback",
         "scope": "openid",
     }, follow_redirects=False)
-    await client.post("/oidc/login", data={
+    await client.post("/login", data={
         "username": "opaque_refresh",
         "password": "testpass123",
     }, follow_redirects=False)
-    auth_resp = await client.get("/oidc/authorize", params={
+    auth_resp = await client.get("/authorize", params={
         "client_id": client_id,
         "response_type": "code",
         "redirect_uri": "http://localhost:8000/callback",

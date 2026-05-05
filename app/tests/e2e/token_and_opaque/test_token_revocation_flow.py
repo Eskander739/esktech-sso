@@ -30,17 +30,17 @@ async def test_revoke_refresh_token_endpoint(client: AsyncClient, setup_test_db)
     client_secret = client_data["client_secret"]
 
     # Получаем код
-    await client.get(f"{ApiVersion.V0}/oidc/authorize", params={
+    await client.get("/authorize", params={
         "client_id": client_id,
         "response_type": "code",
         "redirect_uri": "http://localhost:8000/callback",
         "scope": "openid",
     }, follow_redirects=False)
-    await client.post(f"{ApiVersion.V0}/oidc/login", data={
+    await client.post("/login", data={
         "username": "revoke_refresh_user",
         "password": "testpass123",
     }, follow_redirects=False)
-    auth_resp = await client.get(f"{ApiVersion.V0}/oidc/authorize", params={
+    auth_resp = await client.get("/authorize", params={
         "client_id": client_id,
         "response_type": "code",
         "redirect_uri": "http://localhost:8000/callback",
@@ -48,7 +48,7 @@ async def test_revoke_refresh_token_endpoint(client: AsyncClient, setup_test_db)
     }, follow_redirects=False)
     code = auth_resp.headers["location"].split("code=")[1].split("&")[0]
 
-    token_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    token_resp = await client.post("/token", data={
         "grant_type": "authorization_code",
         "code": code,
         "client_id": client_id,
@@ -60,7 +60,7 @@ async def test_revoke_refresh_token_endpoint(client: AsyncClient, setup_test_db)
     # Отзываем refresh токен
     credentials = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
     revoke_resp = await client.post(
-        f"{ApiVersion.V0}/oidc/revoke",
+        "/revoke",
         data={"token": refresh_token, "token_type_hint": "refresh_token"},
         headers={
             "Authorization": f"Basic {credentials}",
@@ -70,7 +70,7 @@ async def test_revoke_refresh_token_endpoint(client: AsyncClient, setup_test_db)
     assert revoke_resp.status_code == status.HTTP_200_OK
 
     # Пытаемся обновить токен через отозванный refresh
-    refresh_resp = await client.post(f"{ApiVersion.V0}/oidc/token", data={
+    refresh_resp = await client.post("/token", data={
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
         "client_id": client_id,
@@ -83,7 +83,7 @@ async def test_revoke_refresh_token_endpoint(client: AsyncClient, setup_test_db)
 async def test_revoke_without_auth(client: AsyncClient):
     """Отзыв токена без авторизации клиента."""
     revoke_resp = await client.post(
-        f"{ApiVersion.V0}/oidc/revoke",
+        "/revoke",
         data={"token": "some_token"},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
@@ -104,7 +104,7 @@ async def test_revoke_without_token(client: AsyncClient, setup_test_db):
     ).decode()
 
     revoke_resp = await client.post(
-        f"{ApiVersion.V0}/oidc/revoke",
+        "/revoke",
         data={},
         headers={
             "Authorization": f"Basic {credentials}",

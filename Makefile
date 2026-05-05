@@ -14,6 +14,12 @@ run-server:
 test: # Тяжелые тесты! Необходим podman, e2e тесты загружают тяжелые образы, первый запуск будет долгим(максимальный размер образа 1.6 GB - Gitlab)
 	cd app && PYTHONPATH=. pytest tests/
 
+podman-up:
+	podman-compose -f docker-compose-gitlab.yml up
+
+podman-build:
+	podman-compose -f docker-compose-gitlab.yml build
+
 test-unit:
 	cd app && PYTHONPATH=. pytest tests/unit/ -v
 

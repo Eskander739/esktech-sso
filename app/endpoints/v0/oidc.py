@@ -3,10 +3,10 @@ from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from models.msg import Message
 from services.localization import _
+from services.sources import authenticate_from_sources
 from templates_static import templates
-from utils.password_validator import verify_password
 
-router = APIRouter(prefix=f"{ApiVersion.V0}/oidc", tags=["oidc"])
+router = APIRouter(tags=["oidc"])
 
 
 """
@@ -15,15 +15,15 @@ router = APIRouter(prefix=f"{ApiVersion.V0}/oidc", tags=["oidc"])
 1. Пользователь в Jira нажимает "Войти через EskTech"
    ↓
 2. Jira редиректит браузер на:
-   https://sso.esktech.ru/oidc/authorize?client_id=xxx&redirect_uri=https://jira/callback&response_type=code
+   https://sso.esktech.ru/authorize?client_id=xxx&redirect_uri=https://jira/callback&response_type=code
    ↓
-3. Ваш SSO проверяет сессию → нет сессии → редирект на /oidc/login
+3. Ваш SSO проверяет сессию → нет сессии → редирект на /login
    ↓
 4. Пользователь видит вашу login.html → вводит логин/пароль
    ↓
-5. POST /oidc/login → проверка пароля → создание сессии
+5. POST /login → проверка пароля → создание сессии
    ↓
-6. Ваш SSO достаёт oauth_params (сохранённые из шага 2) и редиректит обратно на /oidc/authorize
+6. Ваш SSO достаёт oauth_params (сохранённые из шага 2) и редиректит обратно на /authorize
    ↓
 7. Теперь сессия есть → authorize генерирует code → редирект на redirect_uri (Jira):
    https://jira.example.com/callback?code=abc123
@@ -56,7 +56,6 @@ async def login_page(request: Request):
 
 @router.post("/login")
 async def login(request: Request):
-    """Обработка логина."""
     form = await request.form()
     username = form.get("username")
     password = form.get("password")
@@ -64,34 +63,37 @@ async def login(request: Request):
     if not username or not password:
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": _(Message.input_login_and_password)}, status_code=status.HTTP_400_BAD_REQUEST
+            {"request": request, "error": _(Message.input_login_and_password)},
+            status_code=status.HTTP_400_BAD_REQUEST
         )
-    user = await request.app.state.user_db.get_by_email(username)
+    request.app.state.logger.error(f"Аутентификация с параметрами {username}, {request.app.state.ldap_uri}")
+    user = await authenticate_from_sources(
+        username=username,
+        password=password,
+        user_db=request.app.state.user_db,
+        ldap_uri=request.app.state.ldap_uri,
+    )
+
     if not user:
-        request.app.state.logger.error(f"Не найден пользователь {username}")
+        request.app.state.logger.error(f"Неверные учётные данные для {username}")
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": _(Message.user_not_found)}, status_code=status.HTTP_400_BAD_REQUEST
+            {"request": request, "error": _(Message.invalid_password_or_login)},
+            status_code=status.HTTP_400_BAD_REQUEST
         )
-    else:
-        if not verify_password(password, user["hashed_password"]):
-            request.app.state.logger.error(f"Неверный пароль для пользователя {username}")
-            return templates.TemplateResponse(
-                "login.html",
-                {"request": request, "error": _(Message.invalid_password_or_login)}, status_code=status.HTTP_400_BAD_REQUEST
-            )
 
     request.session["user"] = user
 
     oauth_params = request.session.pop("oauth_params", {})
     if oauth_params:
-        redirect_url = f"/oidc/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params['scope']}"
+        redirect_url = f"/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params['scope']}"
         if oauth_params.get('state'):
             redirect_url += f"&state={oauth_params['state']}"
         return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
     next_url = request.session.pop("next_url", "/")
     return RedirectResponse(url=next_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
 
 
 @router.post("/revoke")

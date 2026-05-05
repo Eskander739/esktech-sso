@@ -51,7 +51,7 @@ class OIDCServer:
                 "scope": scope,
                 "state": state,
             }
-            return RedirectResponse(url="/oidc/login")
+            return RedirectResponse(url="/login")
 
         code = secrets.token_urlsafe(32)
         await oauth_code_db.save_code(
@@ -276,10 +276,10 @@ class OIDCServer:
     async def openid_configuration(self, request: Request):
         return {
             "issuer": settings.ISSUER,
-            "authorization_endpoint": f"{settings.ISSUER}/oidc/authorize",
-            "token_endpoint": f"{settings.ISSUER}/oidc/token",
-            "userinfo_endpoint": f"{settings.ISSUER}/oidc/userinfo",
-            "jwks_uri": f"{settings.ISSUER}/oidc/jwks",
+            "authorization_endpoint": f"{settings.ISSUER}/authorize",
+            "token_endpoint": f"{settings.ISSUER}/token",
+            "userinfo_endpoint": f"{settings.ISSUER}/userinfo",
+            "jwks_uri": f"{settings.ISSUER}/jwks",
             "response_types_supported": ["code"],
             "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
             "subject_types_supported": ["public"],

@@ -9,7 +9,7 @@ from httpx import AsyncClient
 async def test_authorize_redirect(client: AsyncClient, test_client_app):
     """Тест редиректа на страницу логина."""
     response = await client.get(
-        f"{ApiVersion.V0}/oidc/authorize",
+        "/authorize",
         params={
             "client_id": test_client_app["client_id"],
             "redirect_uri": "http://localhost:8000/callback",
@@ -19,4 +19,4 @@ async def test_authorize_redirect(client: AsyncClient, test_client_app):
         follow_redirects=False
     )
     assert response.status_code == status.HTTP_307_TEMPORARY_REDIRECT or response.status_code == status.HTTP_302_FOUND
-    assert "/oidc/login" in response.headers["location"]
+    assert "/login" in response.headers["location"]

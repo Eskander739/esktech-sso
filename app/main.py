@@ -2,11 +2,15 @@
 from contextlib import asynccontextmanager
 from typing import Any
 
+from starlette.responses import RedirectResponse
+
 from auth_server import create_authorization_server
 from config import settings
+from constants import ApiVersion
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
-from endpoints.v0 import admin, health, oidc, users
+from endpoints.v0 import health, oidc
+from endpoints.v0.admin import users, clients
 from fastapi import FastAPI
 from log import logger
 from services.db_pool import DBPool
@@ -26,6 +30,7 @@ async def lifespan(app_local: Any):
     app_local.state.oauth_token_db = OAuthTokenDB(db_pool)
     app_local.state.user_db = UserDB(db_pool)
     app_local.state.logger = logger
+    app_local.state.ldap_uri = settings.LDAP_URI
 
     yield
     if hasattr(app_local.state, "db_pool"):
@@ -42,12 +47,16 @@ app = FastAPI(
 
 app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
+
 app.include_router(health.router)
-app.include_router(users.router)
 app.include_router(oidc.router)
-app.include_router(admin.router, prefix="/admin", tags=["admin"])
+# Admin section
+
+app.include_router(users.router)
+app.include_router(clients.router)
 
 
 @app.get("/")
 async def root():
-    return {"message": "EskTech SSO сервер работает"}
+    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", settings.ISSUER)
+    return RedirectResponse(f"{ApiVersion.V0}/login")

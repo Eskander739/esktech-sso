@@ -20,6 +20,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-RUN pwd
-RUN ls
-CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "main:app", "--reload", "--host", "0.0.0.0", "--port", "8000", "--ssl-keyfile", "/app/server.key", "--ssl-certfile", "/app/server.crt"]

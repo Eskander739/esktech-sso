@@ -95,7 +95,6 @@ class TestLDAPServer:
             auto_bind=True,
         )
 
-
         try:
             conn.add(
                 f"ou=users,{ConfigTestsSample.LDAP_BASE_DN}",
@@ -359,6 +358,7 @@ async def setup_test_db():
     app.state.user_db = UserDB(db_pool)
     app.state.oidc_server = await create_authorization_server()
     app.state.logger = logger
+    app.state.ldap_uri = "localhost"
 
     yield
 

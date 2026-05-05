@@ -38,6 +38,18 @@ class OAuthClientDB:
             result = await session.execute(stmt)
             return len(result.scalars().all())
 
+    async def get_all_clients(self) -> list[OAuthClient]:
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthClient).where(OAuthClient.is_active == True) # type: ignore
+            result = await session.execute(stmt)
+            return result.scalars().all()
+
+    async def delete_client(self, client_id: str) -> None:
+        async with self.db_pool.get_connection() as session:
+            stmt = delete(OAuthClient).where(OAuthClient.client_id == client_id) # type: ignore
+            await session.execute(stmt)
+            await session.commit()
+
     async def create_client(
         self,
         client_id: str,
