@@ -1,7 +1,7 @@
 from typing import Any
 
 from db.models.user_models import User
-from services.db_pool import DBPool
+from services.pool.db_pool import DBPool
 from sqlalchemy import delete, select, update
 
 

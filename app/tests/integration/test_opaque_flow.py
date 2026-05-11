@@ -2,7 +2,7 @@
 import pytest
 from constants import AccessTokenFormat
 from db.oauth import OAuthTokenDB
-from services.db_pool import DBPool
+from services.pool.db_pool import DBPool
 
 
 @pytest.mark.asyncio

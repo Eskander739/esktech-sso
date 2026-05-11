@@ -4,6 +4,9 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libldap2-dev \
     libsasl2-dev \
+    curl \
+    nano \
+    openssl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -15,6 +18,11 @@ RUN pip install --no-cache-dir poetry && \
     poetry install --no-root --no-interaction --no-ansi
 
 COPY app/ .
+COPY generate_rsa_keys.sh .
+
+RUN mkdir -p /app/keys && \
+    chmod +x generate_rsa_keys.sh && \
+    ./generate_rsa_keys.sh
 
 ENV PYTHONPATH=/app
 

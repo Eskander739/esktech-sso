@@ -1,4 +1,7 @@
 """Конфигурация приложения."""
+import os
+from typing import Any
+
 from constants import AccessTokenFormat
 from pydantic import Field
 from pydantic_settings import BaseSettings
@@ -23,7 +26,7 @@ class Settings(BaseSettings):
     )
 
     # OIDC
-    ISSUER: str = Field("https://app:8000")
+    ISSUER: str = Field("https://192.168.1.104:8000")
     OIDC_CLIENT_ID: str = Field("")
     OIDC_CLIENT_SECRET: str = Field("")
 
@@ -38,6 +41,17 @@ class Settings(BaseSettings):
     # Лимиты
     COMMUNITY_MAX_CLIENTS: int = Field(2)
     COMMUNITY_MAX_SOURCES: int = Field(1)
+
+    # Redis
+
+    REDIS_POOL_SIZE: int = 10
+    REDIS_HOST: str = "127.0.0.1"
+    REDIS_PORT: str = "6379"
+    REDIS_DB_PASSWORD: str = "AD34H667J6FHWQ32"
+    REDIS_DB_NUMBER: int = 0
+    REDIS_CACHE_REQUESTS_DB_NUMBER: int = 0
+    PRIVATE_KEY_PATH: Any = os.getenv('PRIVATE_KEY_PATH', '/app/keys/private.pem')
+    PUBLIC_KEY_PATH: Any = os.getenv('PUBLIC_KEY_PATH', '/app/keys/public.pem')
 
     model_config = {
         "env_file": ".env",

@@ -14,7 +14,7 @@ from ldap3 import ALL, Connection, Server
 from ldap3.core.exceptions import LDAPException
 from log import logger
 from main import app
-from services.db_pool import DBPool
+from services.pool.db_pool import DBPool
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from tests.config_tests_sample import ConfigTestsSample

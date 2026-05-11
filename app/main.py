@@ -9,26 +9,33 @@ from config import settings
 from constants import ApiVersion
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB
-from endpoints.v0 import health, oidc
+from endpoints.v0 import health
+from endpoints.oidc import oidc_api as oidc
 from endpoints.v0.admin import users, clients
 from fastapi import FastAPI
 from log import logger
-from services.db_pool import DBPool
+from services.pool.db_pool import DBPool
 from starlette.middleware.sessions import SessionMiddleware
+
+from services.pool.redis_pool import RedisPoolManager
+from services.redis_srv import RedisJWTManager
 
 
 @asynccontextmanager
 async def lifespan(app_local: Any):
     """Управление жизненным циклом приложения."""
     db_pool = DBPool()
+    redis_pool = RedisPoolManager()
     await db_pool.create_tables()
 
     app_local.state.oidc_server = await create_authorization_server()
     app_local.state.db_pool = db_pool
+    app_local.state.redis_pool = redis_pool
     app_local.state.oauth_client_db = OAuthClientDB(db_pool)
     app_local.state.oauth_code_db = OAuthCodeDB(db_pool)
     app_local.state.oauth_token_db = OAuthTokenDB(db_pool)
     app_local.state.user_db = UserDB(db_pool)
+    app_local.state.redis_service = RedisJWTManager(app_local.state.redis_pool)
     app_local.state.logger = logger
     app_local.state.ldap_uri = settings.LDAP_URI
 
@@ -58,5 +65,4 @@ app.include_router(clients.router)
 
 @app.get("/")
 async def root():
-    print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", settings.ISSUER)
     return RedirectResponse(f"{ApiVersion.V0}/login")

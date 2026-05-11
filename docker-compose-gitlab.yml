@@ -21,40 +21,88 @@ services:
     image: redis:7-alpine
     networks:
       - sso-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   app:
     build: .
-    ports:
-      - "8000:8000"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       DATABASE_URL: postgresql+asyncpg://sso_user:sso_pass@db:5432/sso
       REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
     networks:
       - sso-net
     volumes:
+      - sso_keys:/app/keys
       - ./server.crt:/app/server.crt:Z
       - ./server.key:/app/server.key:Z
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "https://localhost:8000/api/v0/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   gitlab:
     image: gitlab/gitlab-ce:17.8.5-ce.0
-    hostname: localhost
     ports:
-      - "8929:80"
+      - "8929:8929"
     environment:
       GITLAB_ROOT_EMAIL: "sso_admin@esktech.ru"
-      GITLAB_ROOT_PASSWORD: "EskTech2026Secure!"
-      GITLAB_OMNIBUS_CONFIG: |
-        gitlab_rails['password_validation'] = false
+      GITLAB_ROOT_PASSWORD: "P@$$w0rd!"
     networks:
       - sso-net
+    volumes:
+      - gitlab_config:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data:/var/opt/gitlab
+      - ./setup-gitlab.sh:/setup-gitlab.sh:ro
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /assets/wrapper &
 
+        echo 'Waiting for GitLab to start...'
+        timeout=300
+        while [ ! -f /var/opt/gitlab/bootstrapped ]; do
+          sleep 5
+          timeout=$((timeout - 5))
+          if [ "$timeout" -le 0 ] 2>/dev/null || [ "$timeout" = "0" ]; then
+            echo 'Timeout waiting for GitLab to start'
+            exit 1
+          fi
+        done
+
+        echo 'Waiting for GitLab API...'
+        while ! curl -s http://localhost:8929/-/readiness > /dev/null 2>&1; do
+          sleep 2
+        done
+
+        echo 'Configuring OIDC client...'
+        if [ -f /connect-gitlab-sso.sh ]; then
+          /setup-gitlab.sh
+        else
+          echo 'Warning: /connect-gitlab-sso.sh not found'
+        fi
+
+        wait
 volumes:
   postgres_data:
+  sso_keys:
+  gitlab_config:
+  gitlab_logs:
+  gitlab_data:
 
 networks:
   sso-net:

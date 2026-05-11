@@ -21,10 +21,8 @@ async def authenticate_from_sources(
         return user
 
     elif ldap_uri:
-        print("БЛЯ МЫ ТУТ")
         ldap_info = await authenticate_ldap(username, password)
         if ldap_info:
-            print("БЛЯ МЫ ТУТ 2222")
 
             existing = await user_db.get_by_username(username)
             if existing:

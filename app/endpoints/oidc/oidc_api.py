@@ -1,4 +1,3 @@
-from constants import ApiVersion
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from models.msg import Message
@@ -45,6 +44,7 @@ async def authorize(request: Request):
         response_type=params.get("response_type"),
         scope=params.get("scope", ""),
         state=params.get("state"),
+        nonce=params.get("nonce"),
     )
 
 
@@ -89,10 +89,12 @@ async def login(request: Request):
         redirect_url = f"/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params['scope']}"
         if oauth_params.get('state'):
             redirect_url += f"&state={oauth_params['state']}"
-        return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+        if oauth_params.get("nonce"):
+            redirect_url += f"&nonce={oauth_params['nonce']}"
+        return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
 
     next_url = request.session.pop("next_url", "/")
-    return RedirectResponse(url=next_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+    return RedirectResponse(url=next_url, status_code=status.HTTP_302_FOUND)
 
 
 

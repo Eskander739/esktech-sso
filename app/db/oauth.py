@@ -4,7 +4,7 @@ from typing import Any
 
 from constants import AccessTokenFormat
 from db.models.auth_models import OAuthClient, OAuthCode, OAuthToken
-from services.db_pool import DBPool
+from services.pool.db_pool import DBPool
 from sqlalchemy import delete, select, update
 
 

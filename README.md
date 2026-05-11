@@ -1,7 +1,7 @@
 [![Stars](https://img.shields.io/github/stars/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
 [![Forks](https://img.shields.io/github/forks/Eskander739/esktech-sso?style=social)](https://github.com/Eskander739/esktech-sso)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-# EskTech SSO — бесплатный лёгкий корпоративный SSO на Python
+# EskTech.Единый вход — бесплатный лёгкий корпоративный SSO на Python
 ![Python](https://img.shields.io/badge/python-3.10%2B-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-green.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-blue.svg)
@@ -14,7 +14,7 @@
 
 ### **EskTech SSO** - Keycloak alternative
 
-**EskTech SSO** - российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
+**EskTech.Единый вход** - российский корпоративный сервис единого входа (Single Sign-On). Объединяет Jira, GitLab, 1С, Битрикс24, МойОфис, VK Teams и любые другие сервисы через стандартные протоколы OIDC, SAML, LDAP и OAuth2.
 
 🔐 **Код открыт. Никаких сюрпризов.**
 ### ✨ **Активная стадия разработки, определенные функциональности могут не работать**
@@ -23,6 +23,40 @@
 #### telegram - @ighill2
 
 ---
+
+### ⚙️ Дорожная карта тестирования интеграции с сервисами
+
+| Протокол | Статус |                                Сервис                                |
+|-------------|:-----------------:|:--------------------------------------------------------------------:|
+|OIDC	|✅	| GitLab (***протестировано***) 
+|SAML 2.0	|❌	|                      Jira Atlassian(***следующий***)      
+|OAuth 2.0	|❌	|                       Yandex ID                      
+|SAML 2.0	|❌	|                       ЕСИА (Госуслуги)                 
+|LDAP	|❌	|       Jira On-Premise, Битрикс24 On-Premise, корпоративные VPN       
+|JWT (прокси)	|❌	|                     1С, любые кастомные системы
+
+## 🚀 Старт EskTech SSO с Gitlab 
+
+#### Предварительные работы
+
+- Заменить ip https://192.168.1.104:8000 на ip вашей хостовой машины(скрипт: ```hostname -I```) в файлах:
+1) config.py
+2) .env
+3) connect-gitlab-sso.sh
+- Пересобрать сертификаты через generate-certs.sh(выполнить запуск в корневой директории проекта)
+
+#### Развертывание EskTeck SSO с Gitlab
+- Иметь предустановленную систему podman/docker
+- Перейти в корневую директорию проекта
+- Выполнить сборку docker-compose-gitlab.yml | через make podman-build или свой скрипт
+- Выполнить запуск docker-compose-gitlab.yml | через make podman-up или свой скрипт
+- Подождать 2-3 минуты прогрузки Gitlab
+- Выполнить запуск скрипта ***connect-gitlab-sso.sh***
+- Дождаться окончания выполнения скрипта + ожидание в 1-2 минуты реконфигурации Gitlab
+- Добавить пользователя через https://<ваш-ip>/api/v0/admin/clients -> секция Пользователей
+- Выполнить вход в Gitlab через EskTech SSO(будет кнопка снизу на странице входа)
+- Вввести логин и пароль от созданного пользователя и нажать кнопку входа
+
 
 ## ✨ Возможности
 | Возможность | EskTech SSO (Полностью бесплатно) |
@@ -41,87 +75,16 @@
 | Обновления и патчи | открытый репозиторий |
 | **Цена** | **0 ₽** |
 
-## 🚀 Быстрый старт (Community Edition)
-
-### Docker (рекомендуемый способ) - ведется разработка
-
-```bash
-docker run -d \
-  --name esktech-sso \
-  -p 8080:8080 \
-  -e ADMIN_PASSWORD=your_secure_password \
-  -e SECRET_KEY=your_secret_key_here \
-  esktech/sso:latest
-После запуска откройте http://localhost:8080
-```
-
-### Docker Compose (с PostgreSQL и Redis)
-#### Необходимо, чтобы запуск происходил из корневой директории проекта(где лежит Dockerfile, директория app и т.д)
-
-```yaml
-version: '3.8'
-
-services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_USER: sso_user
-      POSTGRES_PASSWORD: sso_pass
-      POSTGRES_DB: sso
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - redis
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql+asyncpg://sso_user:sso_pass@db:5432/sso
-      REDIS_URL: redis://redis:6379/0
-
-volumes:
-  postgres_data:
-```
-```bash
-docker-compose up -d
-Из исходников
-bash
-git clone https://github.com/esktech/esktech-sso.git
-cd esktech-sso
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-alembic upgrade head
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-```
 ### 🔧 Поддерживаемые протоколы
 
 
 | Протокол | Статус | Для каких сервисов |
 |-------------|:-----------------:|:------------------:|
 |OIDC	|✅	|Jira Cloud, GitLab, VK Teams, МойОфис, Grafana, Kibana, сотни других
-|LDAP	|✅	|Jira On-Premise, Битрикс24 On-Premise, корпоративные VPN
-|JWT (прокси)	|✅	|1С, любые кастомные системы
-|SAML 2.0	|🚧	|Legacy-системы, госсектор
-|OAuth2	|✅	|API-шлюзы, микросервисы
-### 📦 Интеграция с сервисами
-#### Jira / GitLab / VK Teams (OIDC)
-1. В админке сервиса добавьте OpenID Connect провайдера
-2. Укажите Issuer URL, Client ID, Client Secret (из админки EskTech)
-3. Включите SSO
+|LDAP	|✅	|Jira On-Premise, Битрикс24 On-Premise, корпоративные VPN(планируется)
+|JWT (прокси)	|✅	|1С, любые кастомные системы(планируется)
+|SAML 2.0	|🚧	|Legacy-системы, госсектор(планируется)
+|OAuth2	|✅	|API-шлюзы, микросервисы(планируется)
 
 ### 1С (через Nginx-прокси) - ведется разработка
 ```nginx
@@ -146,7 +109,6 @@ location = /validate {
 esktech-sso
 ├─ app/ # Основной код приложения
 │  ├── db # Работа с БД
-│  │   ├── database.py # Подключение к PostgreSQL (async), движок, сессии
 │  │   ├── models.py # SQLAlchemy модели (User, OAuthClient, OAuthCode, OAuthToken)
 │  │   │   ├── auth_models.py # Модели авторизации
 │  │   │   ├── base.py # Базовая модель
@@ -154,8 +116,9 @@ esktech-sso
 │  │   ├── oauth.py # Класс для взаимодействия с авторизацией
 │  │   └── users.py # Класс для взаимодействия с пользователями
 │  ├── endpoints # API эндпоинты
+│  │   ├── oidc # Статичные эндпоинты SSO для OIDC
+│  │   │   └── oidc_api.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
 │  │   └── v0 # Версия API v0
-│  │       ├── oidc.py # OIDC: /authorize, /token, /userinfo, /jwks, discovery
 │  │       ├── admin.py # Админка OIDC-клиентов (создание, удаление)
 │  │       ├── users.py # CRUD пользователей (список, создание, редактирование, удаление)
 │  │       └── health.py # Healthchecks (/health/live, /health/ready)
@@ -165,8 +128,12 @@ esktech-sso
 │  │   ├── msg.py # Общие сообщения
 │  │   └── users.py # Модели пользователей для запросов
 │  ├── services # Бизнес-логика
-│  │   ├── db_pool.py # Пул соединений с базой данных
-│  │   └── localization.py # Класс для работы с интернационализацией
+│  │   ├── pool # Директория с пулами соединений сервисов
+│  │   │   ├── db_pool.py # Пул соединений БД(PostgreSQL)
+│  │   │   └── redis_pool.py # # Пул соединений Redis
+│  │   ├── localization.py # Класс для работы с интернационализацией
+│  │   ├── redis_srv.py # Класс для работы с Redis
+│  │   └── sources.py # Аутентификация пользователя по всем доступным источникам
 │  ├── templates_static # HTML шаблоны (Jinja2)
 │  │   ├── admin_clients.html # Админка OIDC-клиентов
 │  │   ├── admin_users.html # Список пользователей (админка)
@@ -188,12 +155,16 @@ esktech-sso
 │  ├── constants.py # Константные переменные
 │  ├── log.py # Система логгирования
 │  └── main.py # FastAPI приложение, lifespan, роутеры
+├── docs # Обновления проекта
 ├── .env.example # Пример переменных окружения
 ├── .gitignore # Файл для игнорирования мусора при работа с Git
 ├── CODE_OF_CONDUCT.md # Кодекс поведения участника
+├── connect-gitlab-sso.sh # Скрипт для подключения EskTech.Единый вход в Gitlab
 ├── CONTRIBUTING.md # Как внести вклад в EskTech SSO
-├── docker-compose.yml # PostgreSQL, Redis, приложение
+├──docker-compose-gitlab.yml # Файл для развертывания EskTech.Единый вход с Gitlab
 ├── Dockerfile # Сборка образа (Python 3.12-slim + зависимости)
+├── generate-certs.sh # Скрипт сборки сертификатов для EskTech.Единый вход
+├── generate_rsa_keys.sh # Скрипт для генерации RSA-ключей (2048 бит) SSO-сервера
 ├── LICENSE # AGPLv3
 ├── Makefile # Утилиты: run, test, format, deps
 ├── pyproject.toml # Poetry конфигурация (для разработки)
