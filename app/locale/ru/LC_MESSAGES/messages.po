@@ -75,3 +75,33 @@ msgstr "Некорректный URI перенаправления"
 
 msgid "Only authorization_code flow is supported"
 msgstr "Поддерживается только поток авторизации с использованием кода авторизации."
+
+msgid "Client not deleted"
+msgstr "Клиент не удален"
+
+msgid "User blocked"
+msgstr "Пользователь заблокирован"
+
+msgid "Refresh token expired"
+msgstr "Истек срок токена обновления"
+
+msgid "Not authenticated"
+msgstr "Не аутентифицирован"
+
+msgid "Profile updated"
+msgstr "Профиль обновлен"
+
+msgid "Invalid old password"
+msgstr "Неверный старый пароль"
+
+msgid "Password too weak"
+msgstr "Пароль слишком простой"
+
+msgid "Password changed"
+msgstr "Пароль изменен"
+
+msgid "All tokens revoked"
+msgstr "Все токены отозваны"
+
+msgid "Token expired"
+msgstr "Срок токена истек"

@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
 
-from constants import AccessTokenFormat
+from constants import AccessTokenFormat, UserRole
 from db.models.base import Base
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, Enum as SQLAEnum
 
 
-class OAuthClient(Base):
+class OAuthClientModel(Base):
     __tablename__ = "oauth_clients"
 
     id = Column(Integer, primary_key=True)
@@ -22,7 +22,7 @@ class OAuthClient(Base):
     is_active = Column(Boolean, default=True)
 
 
-class OAuthCode(Base):
+class OAuthCodeModel(Base):
     __tablename__ = "oauth_codes"
 
     code = Column(String(255), primary_key=True)
@@ -36,12 +36,20 @@ class OAuthCode(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
 
 
-class OAuthToken(Base):
+class OAuthTokenModel(Base):
     __tablename__ = "oauth_tokens"
 
     id = Column(Integer, primary_key=True)
     client_id = Column(String(255), nullable=False)
     user_id = Column(Integer, nullable=True)
+    role = Column(
+        SQLAEnum(UserRole,
+                 values_callable=lambda x: [e.value for e in x],
+                 name="user_role"),
+        default=UserRole.USER,
+        nullable=False,
+        index=True
+    )
     token_type = Column(String(50), default=AccessTokenFormat.JWT)  # "jwt" или "opaque"
     access_token = Column(String(1024), unique=True, nullable=False)
     refresh_token = Column(String(1024), unique=True, nullable=True)

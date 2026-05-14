@@ -2,7 +2,7 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from auth_server import OIDCServer
+from oidc_server import OIDCServer
 from constants import AccessTokenFormat
 
 

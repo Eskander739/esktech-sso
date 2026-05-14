@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from constants import AccessTokenFormat
-from db.models.auth_models import OAuthClient, OAuthCode, OAuthToken
+from db.models.auth_models import OAuthClientModel, OAuthCodeModel, OAuthTokenModel
 from services.pool.db_pool import DBPool
 from sqlalchemy import delete, select, update
 
@@ -12,9 +12,29 @@ class OAuthClientDB:
     def __init__(self, db_pool: DBPool):
         self.db_pool = db_pool
 
-    async def get_client(self, client_id: str) -> dict[str, Any] | None:
+    async def get_client_by_client_id(self, client_id: str) -> dict[str, Any] | None:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthClient).where(OAuthClient.client_id == client_id) # type: ignore
+            stmt = select(OAuthClientModel).where(OAuthClientModel.client_id == client_id) # type: ignore
+            result = await session.execute(stmt)
+            client = result.scalar_one_or_none()
+            if client:
+                return {
+                    "client_id": client.client_id,
+                    "client_secret": client.client_secret,
+                    "client_id_issued_at": client.client_id_issued_at,
+                    "client_secret_expires_at": client.client_secret_expires_at,
+                    "redirect_uris": client.redirect_uris,
+                    "grant_types": client.grant_types,
+                    "response_types": client.response_types,
+                    "scope": client.scope,
+                    "token_endpoint_auth_method": client.token_endpoint_auth_method,
+                    "is_active": client.is_active,
+                }
+            return None
+
+    async def get_client_by_id(self, client_id: int) -> dict[str, Any] | None:
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthClientModel).where(OAuthClientModel.id == int(client_id)) # type: ignore
             result = await session.execute(stmt)
             client = result.scalar_one_or_none()
             if client:
@@ -34,19 +54,25 @@ class OAuthClientDB:
 
     async def count_active_clients(self) -> int:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthClient).where(OAuthClient.is_active == True) # type: ignore
+            stmt = select(OAuthClientModel).where(OAuthClientModel.is_active == True) # type: ignore
             result = await session.execute(stmt)
             return len(result.scalars().all())
 
-    async def get_all_clients(self) -> list[OAuthClient]:
+    async def get_all_clients(self) -> list[OAuthClientModel]:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthClient).where(OAuthClient.is_active == True) # type: ignore
+            stmt = select(OAuthClientModel).where(OAuthClientModel.is_active == True) # type: ignore
             result = await session.execute(stmt)
             return result.scalars().all()
 
-    async def delete_client(self, client_id: str) -> None:
+    async def delete_client_by_id(self, client_id: int) -> None:
         async with self.db_pool.get_connection() as session:
-            stmt = delete(OAuthClient).where(OAuthClient.client_id == client_id) # type: ignore
+            stmt = delete(OAuthClientModel).where(OAuthClientModel.id == int(client_id)) # type: ignore
+            await session.execute(stmt)
+            await session.commit()
+
+    async def delete_client_by_client_id(self, client_id: str) -> None:
+        async with self.db_pool.get_connection() as session:
+            stmt = delete(OAuthClientModel).where(OAuthClientModel.client_id == client_id) # type: ignore
             await session.execute(stmt)
             await session.commit()
 
@@ -61,7 +87,7 @@ class OAuthClientDB:
         application_name: str = "",
     ) -> None:
         async with self.db_pool.get_connection() as session:
-            client = OAuthClient(
+            client = OAuthClientModel(
                 client_id=client_id,
                 client_secret=client_secret,
                 client_id_issued_at=datetime.now(UTC),
@@ -92,7 +118,7 @@ class OAuthCodeDB:
     ) -> None:
         expires_at = datetime.now(UTC) + timedelta(minutes=10)
         async with self.db_pool.get_connection() as session:
-            oauth_code = OAuthCode(
+            oauth_code = OAuthCodeModel(
                 code=code,
                 client_id=client_id,
                 redirect_uri=redirect_uri,
@@ -108,7 +134,7 @@ class OAuthCodeDB:
 
     async def get_code(self, code: str) -> dict[str, Any] | None:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthCode).where(OAuthCode.code == code)  # type: ignore
+            stmt = select(OAuthCodeModel).where(OAuthCodeModel.code == code)  # type: ignore
             result = await session.execute(stmt)
             entry = result.scalar_one_or_none()
             if entry:
@@ -130,7 +156,7 @@ class OAuthCodeDB:
 
     async def delete_code(self, code: str) -> None:
         async with self.db_pool.get_connection() as session:
-            await session.execute(delete(OAuthCode).where(OAuthCode.code == code)) # type: ignore
+            await session.execute(delete(OAuthCodeModel).where(OAuthCodeModel.code == code)) # type: ignore
             await session.commit()
 
 
@@ -149,7 +175,7 @@ class OAuthTokenDB:
     ) -> None:
         expires_at = datetime.now(UTC) + timedelta(seconds=token.get("expires_in", 3600))
         async with self.db_pool.get_connection() as session:
-            new_token = OAuthToken(
+            new_token = OAuthTokenModel(
                 client_id=client_id,
                 user_id=user_id,
                 token_type=token_type,
@@ -163,7 +189,7 @@ class OAuthTokenDB:
 
     async def get_token_by_access(self, access_token: str) -> dict[str, Any] | None:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthToken).where(OAuthToken.access_token == access_token)  # type: ignore
+            stmt = select(OAuthTokenModel).where(OAuthTokenModel.access_token == access_token)  # type: ignore
             result = await session.execute(stmt)
             token = result.scalar_one_or_none()
             if token and not token.is_revoked:
@@ -183,7 +209,7 @@ class OAuthTokenDB:
 
     async def get_token_by_refresh(self, refresh_token: str) -> dict[str, Any] | None:
         async with self.db_pool.get_connection() as session:
-            stmt = select(OAuthToken).where(OAuthToken.refresh_token == refresh_token)  # type: ignore
+            stmt = select(OAuthTokenModel).where(OAuthTokenModel.refresh_token == refresh_token)  # type: ignore
             result = await session.execute(stmt)
             token = result.scalar_one_or_none()
             if token and not token.is_revoked:
@@ -195,6 +221,7 @@ class OAuthTokenDB:
                         "refresh_token": token.refresh_token,
                         "client_id": token.client_id,
                         "user_id": token.user_id,
+                        "role": token.role,
                         "scope": token.scope,
                         "is_revoked": token.is_revoked,
                     }
@@ -203,8 +230,8 @@ class OAuthTokenDB:
     async def revoke_token(self, refresh_token: str) -> None:
         async with self.db_pool.get_connection() as session:
             await session.execute(
-                update(OAuthToken)
-                .where(OAuthToken.refresh_token == refresh_token) # type: ignore
+                update(OAuthTokenModel)
+                .where(OAuthTokenModel.refresh_token == refresh_token) # type: ignore
                 .values(is_revoked=True)
             )
             await session.commit()
@@ -212,8 +239,107 @@ class OAuthTokenDB:
     async def revoke_access_token(self, access_token: str) -> None:
         async with self.db_pool.get_connection() as session:
             await session.execute(
-                update(OAuthToken)
-                .where(OAuthToken.access_token == access_token) # type: ignore
+                update(OAuthTokenModel)
+                .where(OAuthTokenModel.access_token == access_token) # type: ignore
                 .values(is_revoked=True)
             )
             await session.commit()
+
+    async def revoke_all_user_tokens(
+            self,
+            user_id: int,
+            exclude_access_token: str | None = None,
+            reason: str = "user_logout"
+    ) -> int:
+        """Отозвать ВСЕ токены пользователя (при логауте или смене пароля)"""
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthTokenModel).where(
+                OAuthTokenModel.user_id == user_id,
+                OAuthTokenModel.is_revoked == False
+            )
+            result = await session.execute(stmt)
+            tokens = result.scalars().all()
+
+            revoked_count = 0
+            for token in tokens:
+                # Исключаем текущий токен, если нужно
+                if exclude_access_token and token.access_token == exclude_access_token:
+                    continue
+
+                token.is_revoked = True
+                revoked_count += 1
+
+            if revoked_count > 0:
+                await session.commit()
+
+            return revoked_count
+
+    async def revoke_all_client_tokens(
+            self,
+            client_id: str,
+            reason: str = "client_deleted"
+    ) -> int:
+        """Отозвать все токены конкретного клиента (при удалении клиента)"""
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthTokenModel).where(
+                OAuthTokenModel.client_id == client_id,
+                OAuthTokenModel.is_revoked == False
+            )
+            result = await session.execute(stmt)
+            tokens = result.scalars().all()
+
+            for token in tokens:
+                token.is_revoked = True
+
+            await session.commit()
+            return len(tokens)
+
+    async def revoke_expired_tokens(self) -> int:
+        """Отозвать все просроченные токены (для фоновой задачи)"""
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthTokenModel).where(
+                OAuthTokenModel.expires_at < datetime.now(UTC),
+                OAuthTokenModel.is_revoked == False
+            )
+            result = await session.execute(stmt)
+            tokens = result.scalars().all()
+
+            for token in tokens:
+                token.is_revoked = True
+
+            await session.commit()
+            return len(tokens)
+
+    async def get_user_active_tokens(self, user_id: int) -> list[dict]:
+        """Получить все активные токены пользователя"""
+        async with self.db_pool.get_connection() as session:
+            stmt = select(OAuthTokenModel).where(
+                OAuthTokenModel.user_id == user_id,
+                OAuthTokenModel.is_revoked == False,
+                OAuthTokenModel.expires_at > datetime.now(UTC)
+            )
+            result = await session.execute(stmt)
+            tokens = result.scalars().all()
+
+            return [
+                {
+                    "token_type": t.token_type,
+                    "client_id": t.client_id,
+                    "scope": t.scope,
+                    "expires_at": t.expires_at,
+                    "issued_at": t.issued_at
+                }
+                for t in tokens
+            ]
+
+    async def cleanup_old_revoked_tokens(self, days_old: int = 30) -> int:
+        """Удалить старые отозванные токены из БД"""
+        async with self.db_pool.get_connection() as session:
+            cutoff_date = datetime.now(UTC) - timedelta(days=days_old)
+            stmt = delete(OAuthTokenModel).where(
+                OAuthTokenModel.is_revoked == True,
+                OAuthTokenModel.issued_at < cutoff_date
+            )
+            result = await session.execute(stmt)
+            await session.commit()
+            return result.rowcount

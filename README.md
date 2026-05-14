@@ -136,8 +136,6 @@ esktech-sso
 │  │   └── sources.py # Аутентификация пользователя по всем доступным источникам
 │  ├── templates_static # HTML шаблоны (Jinja2)
 │  │   ├── admin_clients.html # Админка OIDC-клиентов
-│  │   ├── admin_users.html # Список пользователей (админка)
-│  │   ├── admin_user_form.html # Форма создания/редактирования пользователя
 │  │   └── login.html # Страница логина
 │  ├── tests # Тесты
 │  │   ├── e2e # Сквозные тесты

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import jwt
 import pytest
-from auth_server import create_authorization_server
+from oidc_server import create_authorization_server
 from config import settings
 from db.oauth import OAuthClientDB, OAuthCodeDB, OAuthTokenDB
 from db.users import UserDB

@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from auth_server import create_authorization_server
+from oidc_server import create_authorization_server
 from authlib.oauth2.rfc6749.requests import OAuth2Request
 
 

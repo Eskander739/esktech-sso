@@ -10,6 +10,14 @@ class DefaultLogger:
     Конфигурация системы логирования
     """
 
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+
+        return cls._instance
+
     def __init__(self, name: str = "Backend", log_dir: str = "/var/log/backend"):
         """
         Инициализация логгера
@@ -21,10 +29,8 @@ class DefaultLogger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.INFO)
 
-        # Очищаем существующие обработчики
         self.logger.handlers.clear()
 
-        # Создаем форматтер
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S",
@@ -36,7 +42,6 @@ class DefaultLogger:
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
 
-        # Файловый обработчик
         try:
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir, exist_ok=True)
@@ -79,5 +84,5 @@ class DefaultLogger:
         """Логирование исключения с трассировкой"""
         self.logger.exception(message, *args, exc_info=exc_info, **kwargs)
 
-# Глобальный экземпляр логгера
+
 logger = DefaultLogger()

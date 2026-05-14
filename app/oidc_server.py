@@ -1,92 +1,22 @@
 """Настройка OIDC-сервера на основе Authlib с поддержкой RS256."""
 import base64
-import logging
 import secrets
-import uuid
-import os
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from datetime import UTC, datetime, timedelta, timezone
 
 import jwt
 from config import settings
-from constants import AccessTokenFormat, GrantType
+from constants import AccessTokenFormat, GrantType, UserRole
 from fastapi import HTTPException, Request, status
+
+from log import logger
+from models.general import TokenOIDC, UserInfo, JWKDict, JWTAccessTokenPayload
 from models.msg import Message
 from services.localization import _
 from starlette.responses import RedirectResponse
 
-logger = logging.getLogger(__name__)
+from utils.rsa_keys import load_rsa_keys
 
-# Загрузка RSA ключей для RS256 - УЛУЧШЕННАЯ ВЕРСИЯ
-def load_rsa_keys():
-    """Загружает RSA ключи из нескольких возможных мест."""
-    possible_key_paths = []
 
-    # 1. Из настроек
-    if hasattr(settings, 'PRIVATE_KEY_PATH') and settings.PRIVATE_KEY_PATH:
-        possible_key_paths.append(Path(settings.PRIVATE_KEY_PATH))
-    if hasattr(settings, 'PUBLIC_KEY_PATH') and settings.PUBLIC_KEY_PATH:
-        possible_key_paths.append(Path(settings.PUBLIC_KEY_PATH))
-
-    # 2. Стандартные пути
-    possible_key_paths.extend([
-        Path("/app/keys/private.pem"),
-        Path("/app/keys/public.pem"),
-        Path("/app/private.pem"),
-        Path("/app/public.pem"),
-        Path("/etc/sso/keys/private.pem"),
-        Path("/etc/sso/keys/public.pem"),
-    ])
-
-    # 3. Из переменных окружения
-    env_private = os.getenv("SSO_PRIVATE_KEY_PATH")
-    env_public = os.getenv("SSO_PUBLIC_KEY_PATH")
-    if env_private:
-        possible_key_paths.append(Path(env_private))
-    if env_public:
-        possible_key_paths.append(Path(env_public))
-
-    private_key_path = None
-    public_key_path = None
-
-    # Ищем приватный ключ
-    for path in possible_key_paths:
-        if 'private' in str(path).lower() and path.exists():
-            private_key_path = path
-            break
-
-    # Ищем публичный ключ
-    for path in possible_key_paths:
-        if 'public' in str(path).lower() and path.exists():
-            public_key_path = path
-            break
-
-    private_key = None
-    public_key = None
-
-    if private_key_path and private_key_path.exists():
-        try:
-            with open(private_key_path, "r") as f:
-                private_key = f.read()
-            logger.info(f"Private key loaded from {private_key_path}")
-        except Exception as e:
-            logger.error(f"Failed to read private key from {private_key_path}: {e}")
-    else:
-        logger.error(f"Private key not found. Searched in: {[str(p) for p in possible_key_paths if 'private' in str(p).lower()]}")
-
-    if public_key_path and public_key_path.exists():
-        try:
-            with open(public_key_path, "r") as f:
-                public_key = f.read()
-            logger.info(f"Public key loaded from {public_key_path}")
-        except Exception as e:
-            logger.error(f"Failed to read public key from {public_key_path}: {e}")
-    else:
-        logger.error(f"Public key not found. Searched in: {[str(p) for p in possible_key_paths if 'public' in str(p).lower()]}")
-
-    return private_key, public_key
-
-# Загружаем ключи
 PRIVATE_KEY, PUBLIC_KEY = load_rsa_keys()
 
 if PRIVATE_KEY and PUBLIC_KEY:
@@ -104,7 +34,6 @@ class OIDCServer:
 
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
-        # GitLab требует RS256, поэтому форсируем его если ключи есть
         self.algorithm = "RS256" if PRIVATE_KEY and PUBLIC_KEY else "HS256"
         self.private_key = PRIVATE_KEY
         self.public_key = PUBLIC_KEY
@@ -119,8 +48,9 @@ class OIDCServer:
                        nonce: str | None = None):
         oauth_client_db = request.app.state.oauth_client_db
         oauth_code_db = request.app.state.oauth_code_db
+
         logger.error(f"🔥🔥🔥 AUTHORIZE CALLED with nonce={nonce}, type={type(nonce)}")
-        client = await oauth_client_db.get_client(client_id)
+        client = await oauth_client_db.get_client_by_client_id(client_id)
         if not client or not client.get("is_active"):
             logger.warning(f"Invalid client or inactive: client_id={client_id}")
             raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.invalid_client))
@@ -164,7 +94,7 @@ class OIDCServer:
             redirect_url += f"&state={state}"
         return RedirectResponse(url=redirect_url)
 
-    async def token(self, request: Request):
+    async def token(self, request: Request) -> TokenOIDC:
         form = await request.form()
         grant_type = form.get("grant_type")
 
@@ -191,7 +121,7 @@ class OIDCServer:
         oauth_token_db = request.app.state.oauth_token_db
         user_db = request.app.state.user_db
 
-        client = await oauth_client_db.get_client(client_id)
+        client = await oauth_client_db.get_client_by_client_id(client_id)
         if not client or not client.get("is_active"):
             logger.warning(f"Client not found or inactive: client_id={client_id}")
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.invalid_client))
@@ -231,8 +161,7 @@ class OIDCServer:
             await oauth_code_db.delete_code(code)
             logger.info(f"Code consumed for user {user['id']}, client {client_id}")
 
-            # Генерация токенов
-            if token_format == AccessTokenFormat.OPAQUE:
+            if user.token_type == AccessTokenFormat.OPAQUE or token_format == AccessTokenFormat.OPAQUE:
                 access_token = await self._create_opaque_token(
                     user_id=user["id"],
                     client_id=client_id,
@@ -260,19 +189,10 @@ class OIDCServer:
                     token_type=AccessTokenFormat.JWT,
                 )
 
-            # ВАЖНО: id_token должен включать nonce, если он был в запросе
             id_token = self._create_id_token(user, client_id, nonce=code_data.get("nonce"))
             logger.info(f"Tokens issued for user {user['id']}, client {client_id} (id_token alg={self.algorithm}, nonce={code_data.get('nonce')})")
+            return TokenOIDC(access_token=access_token, refresh_token=refresh_token, id_token=id_token, token_type="Bearer", expires_in=3600)
 
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "id_token": id_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-            }
-
-        # Остальные grant_type (refresh_token, client_credentials) без изменений
         elif grant_type == GrantType.REFRESH_TOKEN:
             refresh_token = form.get(GrantType.REFRESH_TOKEN)
             if not isinstance(refresh_token, str):
@@ -280,6 +200,9 @@ class OIDCServer:
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.refresh_token_invalid_or_missing))
 
             token_data = await oauth_token_db.get_token_by_refresh(refresh_token)
+            if token_data.get("expires_at") < datetime.now(UTC):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.refresh_token_expired))
+
             if not token_data or token_data.get("is_revoked"):
                 logger.warning(f"Invalid or revoked refresh token: {refresh_token}")
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.refresh_token_invalid))
@@ -324,12 +247,7 @@ class OIDCServer:
                 )
 
             logger.info(f"Tokens refreshed for user {user['id']}, client {client_id}")
-            return {
-                "access_token": new_access_token,
-                "refresh_token": new_refresh_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-            }
+            return TokenOIDC(access_token=new_access_token, refresh_token=new_refresh_token, token_type="Bearer", expires_in=3600)
 
         elif grant_type == GrantType.CLIENT_CREDENTIALS:
             if token_format == AccessTokenFormat.OPAQUE:
@@ -346,65 +264,53 @@ class OIDCServer:
                     "",
                 )
             logger.info(f"Client credentials token issued for client {client_id}")
-            return {
-                "access_token": access_token,
-                "token_type": "Bearer",
-                "expires_in": 3600,
-            }
+            return TokenOIDC(access_token=access_token, token_type="Bearer", expires_in=3600)
 
         else:
             logger.error(f"Unsupported grant_type: {grant_type}")
             raise HTTPException(status.HTTP_400_BAD_REQUEST, _(Message.unsupported_grant_type))
 
-    async def userinfo(self, request: Request):
+    async def userinfo(self, request: Request) -> UserInfo:
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
-            logger.warning("Missing or invalid Authorization header in userinfo request")
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.missing_or_invalid_client_credentials))
 
-        token = auth_header.replace("Bearer ", "")
+        token = auth_header[7:]
         user_db = request.app.state.user_db
         oauth_token_db = request.app.state.oauth_token_db
 
-        # Определяем тип токена
         if token.count('.') == 2:
             try:
-                # Пробуем верифицировать JWT
-                try:
-                    payload = jwt.decode(token, self.public_key or self.secret_key,
-                                       algorithms=[self.algorithm, "HS256"])
-                except jwt.InvalidAlgorithmError:
-                    payload = jwt.decode(token, self.secret_key, algorithms=["HS256"])
+                payload = jwt.decode(
+                    token,
+                    self.public_key or self.secret_key,
+                    algorithms=[self.algorithm, "HS256"]
+                )
+                user_id = payload.get("sub")
+                if not user_id:
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid_payload))
+                user = await user_db.get_by_id(int(user_id))
             except jwt.InvalidTokenError as e:
-                logger.warning(f"Invalid JWT token in userinfo: {e}")
+                logger.warning(f"Invalid JWT token: {e}")
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid))
-            user_id = payload.get("sub")
-            if not user_id:
-                logger.warning("JWT payload missing 'sub'")
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid_payload))
-            user = await user_db.get_by_id(int(user_id))
         else:
             token_record = await oauth_token_db.get_token_by_access(token)
-            if not token_record or token_record.get("is_revoked"):
+            if not token_record:
                 logger.warning("Invalid or revoked opaque token")
                 raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_invalid))
+
             user = await user_db.get_by_id(token_record["user_id"])
 
-        if not user:
-            logger.error(f"User not found")
+        if not user or not user.get("is_active"):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.user_not_found))
 
-        userinfo_data = {
-            "sub": str(user["id"]),
-            "name": user.get("full_name", user.get("username", "")),
-            "given_name": user.get("first_name", ""),
-            "family_name": user.get("last_name", ""),
-            "preferred_username": user.get("username", ""),
-            "email": user.get("email", ""),
-            "email_verified": True,
-        }
-        logger.info(f"Userinfo returned for user {user['id']}")
-        return userinfo_data
+        return UserInfo(
+            sub=str(user["id"]),
+            name=user.get("full_name", user.get("username", "")),
+            preferred_username=user.get("username", ""),
+            email=user.get("email", ""),
+            email_verified=True
+        )
 
     async def jwks(self, request: Request):
         """Возвращает JWKS для RS256 в формате, ожидаемом GitLab."""
@@ -416,72 +322,71 @@ class OIDCServer:
             from cryptography.hazmat.primitives import serialization
             from cryptography.hazmat.primitives.asymmetric import rsa
 
-            # Загружаем публичный ключ
             public_key_obj = serialization.load_pem_public_key(
                 self.public_key.encode('utf-8')
             )
 
             if isinstance(public_key_obj, rsa.RSAPublicKey):
-                # Получаем параметры RSA ключа
                 public_numbers = public_key_obj.public_numbers()
-
-                # Формируем JWK в стандартном формате RFC 7517
-                jwk_dict = {
-                    "kty": "RSA",
-                    "kid": "gitlab-sso-key-1",
-                    "use": "sig",
-                    "alg": "RS256",
-                    "n": self._int_to_base64url(public_numbers.n),
-                    "e": self._int_to_base64url(public_numbers.e),
-                }
+                jwk_dict = JWKDict(kty="RSA",
+                                   kid="gitlab-sso-key-1",
+                                   use="sig",
+                                   alg="RS256",
+                                   n=self._int_to_base64url(public_numbers.n),
+                                   e=self._int_to_base64url(public_numbers.e))
 
                 logger.info(f"JWKS endpoint returning key with kid=gitlab-sso-key-1")
-                return {"keys": [jwk_dict]}
+                return {"keys": [jwk_dict.model_dump()]}
 
         except Exception as e:
             logger.error(f"Failed to generate JWKS: {e}", exc_info=True)
             return {"keys": []}
 
-    def _int_to_base64url(self, value: int) -> str:
+    @staticmethod
+    def _int_to_base64url(value: int) -> str:
         """Конвертирует integer в base64url без padding."""
-        # Конвертируем integer в байты
         byte_length = (value.bit_length() + 7) // 8
         bytes_data = value.to_bytes(byte_length, byteorder='big')
-        # Кодируем в base64 и удаляем padding
         return base64.urlsafe_b64encode(bytes_data).decode('utf-8').rstrip('=')
 
     async def openid_configuration(self, request: Request):
         base_url = settings.ISSUER.rstrip('/')
+
+        alg_values = settings.OIDC_ID_TOKEN_SIGNING_ALG_VALUES_SUPPORTED
+        if not alg_values:
+            alg_values = ["RS256"] if self.algorithm == "RS256" else ["HS256"]
+
         config = {
             "issuer": base_url,
-            "authorization_endpoint": f"{base_url}/authorize",
-            "token_endpoint": f"{base_url}/token",
-            "userinfo_endpoint": f"{base_url}/userinfo",
-            "jwks_uri": f"{base_url}/jwks",
-            "response_types_supported": ["code"],
-            "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
-            "subject_types_supported": ["public"],
-            "id_token_signing_alg_values_supported": ["RS256"] if self.algorithm == "RS256" else ["HS256"],
-            "scopes_supported": ["openid", "profile", "email"],
-            "token_endpoint_auth_methods_supported": ["client_secret_basic"],
-            "claims_supported": [
-                "sub", "name", "given_name", "family_name",
-                "preferred_username", "email", "email_verified"
-            ],
+            "authorization_endpoint": settings.OIDC_AUTHORIZATION_ENDPOINT or f"{base_url}/authorize",
+            "token_endpoint": settings.OIDC_TOKEN_ENDPOINT or f"{base_url}/token",
+            "userinfo_endpoint": settings.OIDC_USERINFO_ENDPOINT or f"{base_url}/userinfo",
+            "jwks_uri": settings.OIDC_JWKS_URI or f"{base_url}/jwks",
+            "response_types_supported": settings.OIDC_RESPONSE_TYPES_SUPPORTED,
+            "grant_types_supported": settings.OIDC_GRANT_TYPES_SUPPORTED,
+            "subject_types_supported": settings.OIDC_SUBJECT_TYPES_SUPPORTED,
+            "id_token_signing_alg_values_supported": alg_values,
+            "scopes_supported": settings.OIDC_SCOPES_SUPPORTED,
+            "token_endpoint_auth_methods_supported": settings.OIDC_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED,
+            "claims_supported": settings.OIDC_CLAIMS_SUPPORTED,
         }
+
         logger.info(f"OpenID configuration served: {config}")
         return config
 
-    def _create_jwt_access_token(self, user: dict, client_id: str, scope: str) -> str:
-        payload = {
-            "jti": str(uuid.uuid4()),
-            "sub": str(user["id"]),
-            "client_id": client_id,
-            "scope": scope,
-            "exp": datetime.now(UTC) + timedelta(hours=1),
-            "iat": datetime.now(UTC),
-        }
-        return jwt.encode(payload, self.private_key or self.secret_key, algorithm=self.algorithm)
+    def _create_jwt_access_token(self, user: dict, client_id: str, scope: str, role: UserRole) -> str:
+        """Создает JWT access token используя Pydantic модель."""
+
+        payload = JWTAccessTokenPayload(
+            sub=str(user["id"]),
+            client_id=client_id,
+            scope=scope,
+            exp=datetime.now(timezone.utc) + timedelta(hours=1),
+            role=role
+        )
+
+        secret = self.private_key or self.secret_key
+        return jwt.encode(payload.model_dump(exclude_none=True), secret, algorithm=self.algorithm)
 
     def _create_id_token(self, user: dict, client_id: str, nonce: str | None = None) -> str:
         """Создает ID Token с обязательной RS256 подписью для GitLab."""
@@ -502,17 +407,13 @@ class OIDCServer:
             "family_name": user.get("last_name", ""),
         }
 
-        # Добавляем nonce, если он есть
         if nonce:
             payload["nonce"] = nonce
             logger.info(f"Adding nonce to id_token: {nonce}")
 
-        # Удаляем None значения
         payload = {k: v for k, v in payload.items() if v is not None}
 
-        # GitLab требует RS256 для id_token
         if self.private_key and self.algorithm == "RS256":
-            # Добавляем заголовок с kid для соответствия JWKS
             headers = {
                 "kid": "gitlab-sso-key-1",
                 "typ": "JWT",
@@ -526,9 +427,8 @@ class OIDCServer:
             )
             logger.info(f"ID Token signed with RS256, kid=gitlab-sso-key-1")
 
-            # Само-верификация для отладки
             try:
-                verified = jwt.decode(
+                jwt.decode(
                     token,
                     self.public_key,
                     algorithms=["RS256"],
@@ -541,13 +441,23 @@ class OIDCServer:
 
             return token
         else:
-            # Fallback на HS256 (но GitLab не примет это!)
             logger.error(f"FALLBACK TO HS256 FOR ID TOKEN! GitLab will reject this!")
             token = jwt.encode(payload, self.secret_key, algorithm="HS256")
             return token
 
-    async def _create_opaque_token(self, user_id: int, client_id: str, scope: str, oauth_token_db) -> str:
+    async def _create_opaque_token(self, user_id: int, client_id: str, scope: str, oauth_token_db, role: UserRole) -> str:
+        """Создает и сразу сохраняет opaque токен в БД."""
         token = secrets.token_urlsafe(32)
+
+        await oauth_token_db.save_token(
+            token={"access_token": token, "expires_in": 3600},
+            client_id=client_id,
+            user_id=user_id,
+            scope=scope,
+            token_type=AccessTokenFormat.OPAQUE,
+            role=role
+        )
+
         return token
 
 

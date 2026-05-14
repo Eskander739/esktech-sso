@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: sso_user
+      POSTGRES_PASSWORD: sso_pass
+      POSTGRES_DB: sso
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sso-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U sso_user -d sso" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- Redis для вашего SSO (оставляем) ---
+  redis:
+    image: redis:7-alpine
+    networks:
+      - sso-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sso_user:sso_pass@db:5432/sso
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    networks:
+      - sso-net
+    volumes:
+      - sso_keys:/app/keys
+      - ./server.crt:/app/server.crt:Z
+      - ./server.key:/app/server.key:Z
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "https://localhost:8000/api/v0/health/live" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  jira-db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: jira_user
+      POSTGRES_PASSWORD: jira_pass
+      POSTGRES_DB: jiradb
+    volumes:
+      - jira_postgres_data:/var/lib/postgresql/data
+    networks:
+      - sso-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U jira_user -d jiradb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  jira:
+    image: atlassian/jira-software:latest
+    depends_on:
+      jira-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"          # Web UI Jira
+      # - "8081:8081"        # порт для синхронизации узлов (DC), не требуется
+    environment:
+      # Настройки прокси (если за reverse proxy, можно указать)
+      ATL_PROXY_NAME: localhost
+      ATL_PROXY_PORT: 8080
+      ATL_PROXY_SCHEME: http
+      # Подключение к БД
+      ATL_JDBC_URL: jdbc:postgresql://jira-db:5432/jiradb
+      ATL_JDBC_USER: jira_user
+      ATL_JDBC_PASSWORD: jira_pass
+      # Отключение автоматической индексации для тестов (опционально)
+      ATL_TOMCAT_SCHEME: http
+      ATL_TOMCAT_SECURE: "false"
+    volumes:
+      - jira_data:/var/atlassian/application-data/jira
+    networks:
+      - sso-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres_data:      # для БД SSO
+  sso_keys:           # ключи SSO
+  jira_postgres_data: # для БД Jira
+  jira_data:          # домашняя директория Jira
+
+networks:
+  sso-net:
+    driver: bridge

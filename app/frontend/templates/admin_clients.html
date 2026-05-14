@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Админ панель EskTech SSO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0A111F;
+            color: #EFF3F8;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo span {
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            color: #3B82F6;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: rgba(18,28,40,0.8);
+            border: 1px solid rgba(59,130,246,0.3);
+            color: #EFF3F8;
+            padding: 0.625rem 1.25rem;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            min-height: 44px;
+        }
+
+        .tab-btn.active {
+            background: #3B82F6;
+            color: #0A111F;
+            border-color: #3B82F6;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: rgba(18,28,40,0.8);
+            border-radius: 24px;
+            padding: 1.25rem;
+            border: 1px solid rgba(59,130,246,0.2);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-header h3 {
+            color: #3B82F6;
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 0 -0.5rem;
+            padding: 0 0.5rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 0.85rem;
+            word-break: break-word;
+        }
+
+        th {
+            color: #3B82F6;
+            font-weight: 600;
+        }
+
+        input, select, textarea {
+            background: #0A111F;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #EFF3F8;
+            padding: 0.75rem;
+            border-radius: 12px;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3B82F6;
+        }
+
+        button {
+            background: #3B82F6;
+            color: #0A111F;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+            min-height: 44px;
+        }
+
+        button:hover {
+            background: #2563EB;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #EF4444;
+            color: #FFFFFF;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.1);
+            color: #EFF3F8;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .btn-sm {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            min-height: 36px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .actions button {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+            min-height: 36px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: #1a1f2e;
+            border-radius: 28px;
+            padding: 1.5rem;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid rgba(59,130,246,0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .close {
+            cursor: pointer;
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            left: 20px;
+            background: #1e293b;
+            border-left: 4px solid #3B82F6;
+            color: #EFF3F8;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1100;
+            font-size: 0.875rem;
+            max-width: 400px;
+            margin-left: auto;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .toast.error {
+            border-left-color: #EF4444;
+        }
+
+        .toast.success {
+            border-left-color: #10B981;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .confirm-popup {
+            position: fixed;
+            background: #1e293b;
+            border: 1px solid #3B82F6;
+            border-radius: 16px;
+            padding: 1rem;
+            z-index: 1200;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            width: calc(100% - 2rem);
+            max-width: 280px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: auto;
+        }
+
+        .confirm-popup p {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .confirm-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .confirm-buttons button {
+            padding: 8px 16px;
+            font-size: 0.875rem;
+            min-height: 40px;
+        }
+
+        .token-value {
+            font-family: monospace;
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.3);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 0.75rem; }
+            .form-row { grid-template-columns: 1fr; gap: 0.75rem; }
+            .card { padding: 1rem; }
+            .card-header { flex-direction: column; align-items: stretch; }
+            .card-header button { width: 100%; }
+            .tab-btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
+            .header { flex-direction: column; align-items: flex-start; }
+            .logo { font-size: 1.5rem; }
+            .actions { flex-direction: column; }
+            .actions button { width: 100%; }
+            .modal-content { padding: 1rem; }
+        }
+
+        @media (max-width: 480px) {
+            th, td { padding: 0.5rem; font-size: 0.75rem; }
+            .toast { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">EskTech.<span>Админ панель</span></div>
+        <button id="logoutBtn" class="btn-secondary" style="background:#EF4444; color:white;">Выйти</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="clients">OIDC Клиенты</button>
+        <button class="tab-btn" data-tab="users">Пользователи</button>
+        <button class="tab-btn" data-tab="tokens">Токены OPAQUE</button>
+    </div>
+
+    <!-- Вкладка: OIDC Клиенты -->
+    <div id="tab-clients" class="tab-content active">
+        <div class="card">
+            <div class="card-header">
+                <h3>Список OIDC клиентов</h3>
+                <button id="openCreateClientModalBtn">Создать клиент</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="clientsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Название</th>
+                            <th>Client ID</th>
+                            <th>Redirect URIs</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsList">
+                        <tr><td colspan="5">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка: Пользователи -->
+    <div id="tab-users" class="tab-content">
+        <div class="card">
+            <div class="card-header">
+                <h3>Список пользователей</h3>
+                <button id="openCreateUserModalBtn">Создать пользователя</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="usersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Полное имя</th>
+                            <th>Активен</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersList">
+                        <tr><td colspan="6">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка: Токены OPAQUE -->
+    <div id="tab-tokens" class="tab-content">
+        <!-- Блок: Токены выбранного пользователя -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Управление токенами пользователя</h3>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <select id="tokenUserSelect" style="width: auto; min-width: 200px;">
+                        <option value="">-- Выберите пользователя --</option>
+                    </select>
+                    <button id="refreshTokensBtn" class="btn-secondary">Обновить</button>
+                    <button id="revokeAllUserTokensAltBtn" class="btn-danger">Отозвать ВСЕ токены пользователя</button>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table id="tokensTable">
+                    <thead>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Client ID</th>
+                            <th>Scope</th>
+                            <th>Выдан</th>
+                            <th>Истекает</th>
+                            <th>Access токен</th>
+                            <th>Refresh токен</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tokensList">
+                        <tr><td colspan="8">Выберите пользователя</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Блок: Мои токены (текущего администратора) -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Мои активные токены</h3>
+                <button id="refreshMyTokensBtn" class="btn-secondary">Обновить</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="myTokensTable">
+                    <thead>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Client ID</th>
+                            <th>Scope</th>
+                            <th>Выдан</th>
+                            <th>Истекает</th>
+                            <th>Access токен</th>
+                            <th>Refresh токен</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="myTokensList">
+                        <tr><td colspan="8">Загрузка...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для создания OIDC клиента -->
+<div id="createClientModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Создать OIDC клиент</h3>
+            <span class="close-client">&times;</span>
+        </div>
+        <div class="form-group">
+            <label>Название приложения</label>
+            <input type="text" id="modalClientName" placeholder="Например: GitLab Production">
+        </div>
+        <div class="form-group">
+            <label>Redirect URI (один или несколько через запятую)</label>
+            <input type="text" id="modalClientRedirectUris" placeholder="https://gitlab.example.com/users/auth/openid_connect/callback">
+        </div>
+        <button id="confirmCreateClientBtn">Создать</button>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования пользователя -->
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редактировать пользователя</h3>
+            <span class="close-edit">&times;</span>
+        </div>
+        <input type="hidden" id="editUserId">
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="editUserEmail">
+        </div>
+        <div class="form-group">
+            <label>Полное имя</label>
+            <input type="text" id="editUserFullName">
+        </div>
+        <div class="form-group">
+            <label>Новый пароль (оставьте пустым, чтобы не менять)</label>
+            <input type="password" id="editUserPassword">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="editUserIsActive"> Активен</label>
+        </div>
+        <button id="updateUserBtn">Сохранить</button>
+    </div>
+</div>
+
+<!-- Модальное окно для создания пользователя -->
+<div id="createUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Создать пользователя</h3>
+            <span class="close-create">&times;</span>
+        </div>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="modalUserUsername" placeholder="username">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="modalUserEmail" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+            <label>Полное имя</label>
+            <input type="text" id="modalUserFullName" placeholder="Иван Иванов">
+        </div>
+        <div class="form-group">
+            <label>Пароль</label>
+            <input type="password" id="modalUserPassword" placeholder="******">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="modalUserIsActive" checked> Активен</label>
+        </div>
+        <button id="confirmCreateUserBtn">Создать</button>
+    </div>
+</div>
+
+<script type="module" src="/frontend/static/js/admin_clients.js"></script>
+</body>
+</html>

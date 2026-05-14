@@ -12,7 +12,6 @@ class DBPool:
         connection_count: int = DB_POOL_SIZE,
     ):
 
-        # Используем асинхронный драйвер asyncpg
         self.engine = create_async_engine(
             settings.DATABASE_URL,
             pool_size=connection_count,  # <-- РАЗМЕР ПУЛА
@@ -26,12 +25,13 @@ class DBPool:
             self.engine, class_=AsyncSession, expire_on_commit=False
         )
 
-    async def create_tables(self):
+    async def create_tables(self, drop_all: bool = True):
         async with self.get_connection() as session:
-            # Получите connection из session
             connection = await session.connection()
+            if drop_all:
+                await connection.run_sync(Base.metadata.drop_all)
             await connection.run_sync(Base.metadata.create_all)
-            await connection.commit()  # Явный коммит
+            await connection.commit()
 
     async def close_pool(self):
         await self.engine.dispose()

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
+
+from constants import ApiVersion, UserRole
 from models.msg import Message
 from services.localization import _
 from services.sources import authenticate_from_sources
-from templates_static import templates
+from frontend.templates import templates
 
 router = APIRouter(tags=["oidc"])
 
@@ -33,6 +35,7 @@ router = APIRouter(tags=["oidc"])
    ↓
 10. Jira может запросить /userinfo с access_token, чтобы получить данные пользователя
 """
+
 @router.get("/authorize")
 async def authorize(request: Request):
     """Эндпоинт авторизации."""
@@ -66,7 +69,23 @@ async def login(request: Request):
             {"request": request, "error": _(Message.input_login_and_password)},
             status_code=status.HTTP_400_BAD_REQUEST
         )
-    request.app.state.logger.error(f"Аутентификация с параметрами {username}, {request.app.state.ldap_uri}")
+
+    user_record = await request.app.state.user_db.get_by_username(username)
+    if user_record is None:
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": _(Message.user_not_found)},
+            status_code=status.HTTP_404_NOT_FOUND
+        )
+
+    if not user_record.get("is_active"):
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": _(Message.user_blocked)},
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    request.app.state.logger.info(f"Аутентификация пользователя {username}")
     user = await authenticate_from_sources(
         username=username,
         password=password,
@@ -84,31 +103,49 @@ async def login(request: Request):
 
     request.session["user"] = user
 
-    oauth_params = request.session.pop("oauth_params", {})
-    if oauth_params:
-        redirect_url = f"/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params['scope']}"
+    oauth_params = request.session.get("oauth_params", {})
+
+    if oauth_params and oauth_params.get("client_id"):
+        request.app.state.logger.info(
+            f"OAuth flow detected for user {username}, client: {oauth_params.get('client_id')}")
+
+        oauth_params = request.session.pop("oauth_params", {})
+
+        redirect_url = f"/authorize?client_id={oauth_params['client_id']}&redirect_uri={oauth_params['redirect_uri']}&response_type=code&scope={oauth_params.get('scope', '')}"
+
         if oauth_params.get('state'):
             redirect_url += f"&state={oauth_params['state']}"
         if oauth_params.get("nonce"):
             redirect_url += f"&nonce={oauth_params['nonce']}"
+
         return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
 
-    next_url = request.session.pop("next_url", "/")
-    return RedirectResponse(url=next_url, status_code=status.HTTP_302_FOUND)
+    next_url: str | None = request.session.pop("next_url", None)
+    if next_url:
+        request.app.state.logger.info(f"Redirect to next_url: {next_url}")
+        return RedirectResponse(url=next_url, status_code=status.HTTP_302_FOUND)
 
+    user_role = user.get("role")
+    if user_role in (UserRole.ADMIN, UserRole.SUPER_ADMIN):
+        default_redirect = f"{ApiVersion.V0}/admin/clients"
+        request.app.state.logger.info(f"Admin user {username} redirecting to {default_redirect}")
+    else:
+        default_redirect = f"{ApiVersion.V0}/profile"
+        request.app.state.logger.info(f"Regular user {username} redirecting to {default_redirect}")
+
+    return RedirectResponse(url=default_redirect, status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/revoke")
 async def revoke_token(request: Request):
     """OAuth 2.0 Token Revocation endpoint (RFC 7009)."""
     form = await request.form()
-    token = form.get("token")
+    current_token = form.get("token")
     token_type_hint = form.get("token_type_hint", "access_token")
 
-    if not token:
+    if not current_token:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.token_not_found))
 
-    # Basic аутентификация клиента
     auth = request.headers.get("Authorization")
     if not auth or not auth.startswith("Basic "):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.missing_or_invalid_client_credentials))
@@ -117,8 +154,7 @@ async def revoke_token(request: Request):
     credentials = base64.b64decode(auth[6:]).decode()
     client_id, client_secret = credentials.split(":", 1)
 
-    # Проверяем клиента
-    client = await request.app.state.oauth_client_db.get_client(client_id)
+    client = await request.app.state.oauth_client_db.get_client_by_client_id(client_id)
     if not client or client.get("client_secret") != client_secret:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, _(Message.invalid_client_credentials))
 
@@ -129,26 +165,24 @@ async def revoke_token(request: Request):
     elif token_type_hint == "refresh_token":
         await oauth_token_db.revoke_token(token)
     else:
-        # Пробуем оба варианта
         await oauth_token_db.revoke_access_token(token)
         await oauth_token_db.revoke_token(token)
 
     return {"message": _(Message.token_revoked)}
 
 
-
 @router.post("/token")
 async def token(request: Request):
     """Токен эндпоинт."""
     result = await request.app.state.oidc_server.token(request)
-    return JSONResponse(result)
+    return JSONResponse(result.model_dump(exclude_none=True))
 
 
 @router.get("/userinfo")
 async def userinfo(request: Request):
     """Userinfo эндпоинт."""
     result = await request.app.state.oidc_server.userinfo(request)
-    return JSONResponse(result)
+    return JSONResponse(result.model_dump())
 
 
 @router.get("/jwks")

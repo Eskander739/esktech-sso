@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Вход — EskTech SSO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #0A111F;
+            color: #EFF3F8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .card {
+            background: rgba(18, 28, 40, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #FFFFFF, #3B82F6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo span {
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+            color: #3B82F6;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.375rem;
+            font-weight: 500;
+            color: #EFF3F8;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.3px;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: #0A111F;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #EFF3F8;
+            border-radius: 14px;
+            font-size: 16px; /* предотвращает зум на iOS */
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #3B82F6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Улучшенная анимация для кнопки с раздувающимся пузырём */
+        .btn-login {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: #FFFFFF;
+            font-weight: 600;
+            padding: 0.875rem;
+            width: 100%;
+            border: none;
+            border-radius: 40px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            letter-spacing: 0.5px;
+            min-height: 52px;
+        }
+
+        .btn-login:hover {
+            background: linear-gradient(135deg, #2563EB, #1D4ED8);
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+            letter-spacing: 1px;
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+            transition: transform 0.1s;
+        }
+
+        /* Пузырь, который раздувается при наведении */
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 100%);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+
+        /* Пузырь раздувается */
+        .btn-login:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Пузырь сдувается обратно */
+        .btn-login:not(:hover)::before {
+            width: 0;
+            height: 0;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Дополнительный эффект свечения текста при наведении */
+        .btn-login:hover {
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Анимация загрузки */
+        .btn-login.loading {
+            pointer-events: none;
+            background: linear-gradient(135deg, #60A5FA, #3B82F6);
+            position: relative;
+        }
+
+        .btn-login.loading .btn-text {
+            opacity: 0;
+        }
+
+        .btn-login.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #FFFFFF;
+            border-radius: 50%;
+            animation: button-loading-spinner 0.8s linear infinite;
+        }
+
+        .btn-login.loading::before {
+            display: none;
+        }
+
+        @keyframes button-loading-spinner {
+            from {
+                transform: rotate(0turn);
+            }
+            to {
+                transform: rotate(1turn);
+            }
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #F87171;
+            padding: 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            border-left: 3px solid #EF4444;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            padding: 0.75rem;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            text-align: center;
+            margin-bottom: 1rem;
+            border-left: 3px solid #10B981;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Дополнительные мобильные улучшения */
+        @media (max-width: 480px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+                border-radius: 24px;
+            }
+
+            .logo {
+                font-size: 1.375rem;
+                margin-bottom: 1rem;
+            }
+
+            h1 {
+                font-size: 1.25rem;
+                margin-bottom: 1.25rem;
+            }
+
+            input {
+                padding: 0.75rem;
+                font-size: 16px;
+            }
+
+            .btn-login {
+                padding: 0.75rem;
+                min-height: 48px;
+                font-size: 0.9375rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">EskTech.<span>Единый Вход</span></div>
+    <h1>Вход в систему</h1>
+    <div id="messageContainer"></div>
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+    <form id="loginForm">
+        <div class="form-group">
+            <input type="text" id="username" name="username" placeholder="Логин" required autocomplete="username">
+        </div>
+        <div class="form-group">
+            <input type="password" id="password" name="password" placeholder="Пароль" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-login">
+            <span class="btn-text">Войти</span>
+        </button>
+    </form>
+</div>
+
+<script type="module" src="/frontend/static/js/login.js"></script>
+</body>
+</html>

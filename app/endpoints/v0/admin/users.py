@@ -1,39 +1,17 @@
 """Управление пользователями (CRUD) для администратора."""
+from starlette import status
+from starlette.requests import Request
+
 from constants import ApiVersion
 from fastapi import APIRouter, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+
+from endpoints.v0.admin.clients import router
 from models.msg import Message
 from models.users import UserCreate, UserUpdate
 from services.localization import _
-from templates_static import templates
 from utils.password_validator import hash_password
 
 router = APIRouter(prefix=f"{ApiVersion.V0}/admin/users", tags=["admin"])
-
-
-@router.get("/", response_class=HTMLResponse)
-async def list_users_html(request: Request):
-    """Список пользователей (админка)."""
-    user_db = request.app.state.user_db
-    users = await user_db.get_all()  # нужно добавить метод get_all в UserDB
-    return templates.TemplateResponse(request, "admin_users.html", {"users": users})
-
-
-@router.get("/create", response_class=HTMLResponse)
-async def create_user_form(request: Request):
-    """Форма создания пользователя."""
-    return templates.TemplateResponse(request, "admin_user_form.html", {"user": None})
-
-
-@router.get("/{user_id}/edit", response_class=HTMLResponse)
-async def edit_user_form(request: Request, user_id: int):
-    """Форма редактирования пользователя."""
-    user_db = request.app.state.user_db
-    user = await user_db.get_by_id(user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_(Message.user_not_found))
-    return templates.TemplateResponse(request, "admin_user_form.html", {"user": user})
-
 
 # ---------- JSON API ----------
 @router.get("/list", response_model=list[dict])
@@ -58,7 +36,6 @@ async def list_users_json(request: Request):
 async def create_user(request: Request, data: UserCreate):
     """Создать пользователя."""
     user_db = request.app.state.user_db
-    # Проверка уникальности
     user = await user_db.get_by_username(data.username)
     if user or user is not None and user.get("email") == data.email:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=_(Message.user_is_already_registered))
@@ -66,6 +43,7 @@ async def create_user(request: Request, data: UserCreate):
     hashed = hash_password(data.password) if data.password else None
     user_id = await user_db.create(
         username=data.username,
+        token_type=data.token_type,
         email=data.email,
         hashed_password=hashed,
         full_name=data.full_name,
@@ -117,3 +95,24 @@ async def delete_user(request: Request, user_id: int):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_(Message.user_not_found))
     await user_db.delete(user_id)
     return {"message": _(Message.user_is_deleted)}
+
+
+@router.post("/logout")
+async def logout(request: Request):
+    """Logout текущего пользователя - отзыв всех его токенов"""
+    user = request.session.get("user")
+    if not user:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+
+    oauth_token_db = request.app.state.oauth_token_db
+    auth_header = request.headers.get("Authorization")
+    current_token = auth_header[7:] if auth_header and auth_header.startswith("Bearer ") else None
+
+    revoked_count = await oauth_token_db.revoke_all_user_tokens(
+        user_id=user["id"],
+        exclude_access_token=current_token
+    )
+
+    request.session.clear()
+
+    return {"message": f"Logged out successfully, {revoked_count} tokens revoked"}
